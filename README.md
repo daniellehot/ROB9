@@ -19,4 +19,10 @@ Robotiq - http://wiki.ros.org/robotiq/Tutorials/Control%20of%20a%203-Finger%20Gr
 PTU Tilt-pan
 
 roslaunch ur_robot_driver ur5_bringup.launch robot_ip:=192.168.1.106 kinematics_config:=${HOME}/ur10_example_calibration.yaml
+
+Launch camera on Dimitris PC:
+
+'''
+roslaunch realsense2_camera rs_camera.launch
+'''
  
