@@ -8,7 +8,6 @@ from realsense_service.srv import rgb, rgbResponse
 import rospy
 import pyrealsense2 as rs
 import numpy as np
-import cv2
 from cv_bridge import CvBridge
 
 def sendIntrinsics():
