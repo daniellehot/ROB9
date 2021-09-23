@@ -8,7 +8,6 @@ import rospy
 from realsense_service.srv import *
 import numpy as np
 import cv2
-from cv_bridge import CvBridge
 
 def captureRealsense():
     rospy.wait_for_service("/sensors/realsense/capture")
@@ -24,8 +23,7 @@ def getRGB():
     msg = rgb()
     msg.data = True
     response = rgbService(msg)
-    br = CvBridge()
-    img = br.imgmsg_to_cv2(response.img)
+    img = np.frombuffer(response.img.data, dtype=np.uint8).reshape(response.img.height, response.img.width, -1)
     cv2.imshow("RGB", img)
     cv2.waitKey(0)
 
