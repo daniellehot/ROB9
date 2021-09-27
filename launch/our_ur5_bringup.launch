@@ -10,16 +10,23 @@
   <arg name="controllers" default="joint_state_controller scaled_pos_joint_traj_controller speed_scaling_state_controller force_torque_sensor_controller" doc="Controllers that are activated by default."/>
   <arg name="stopped_controllers" default="pos_joint_traj_controller joint_group_vel_controller" doc="Controllers that are initally loaded, but not started."/>
   <arg name="controller_config_file" default="$(find ur_robot_driver)/config/ur5_controllers.yaml" doc="Config file used for defining the ROS-Control controllers."/>
-  <arg name="robot_description_file" default="$(find ur_description)/launch/load_ur5.launch" doc="Robot description launch file."/>
-  <arg name="kinematics_config" default="$(find ur_description)/config/ur5/robot_calibration.yaml" doc="Kinematics config file used for calibration correction. This will be used to verify the robot's calibration is matching the robot_description."/>
+  <arg name="robot_description_file" default="$(find ur_description)/launch/load_arm_gripper.launch" doc="Robot description launch file."/>
+  <arg name="kinematics_config" default="$(find ROB9)/config/ur5/robot_calibration.yaml" doc="Kinematics config file used for calibration correction. This will be used to verify the robot's calibration is matching the robot_description."/>
   <arg name="headless_mode" default="false" doc="Automatically send URScript to robot to execute. On e-Series this does require the robot to be in 'remote-control' mode. With this, the URCap is not needed on the robot."/>
+  <arg name="pipeline" default="ompl"/>
 
   <include file="$(find ur_robot_driver)/launch/ur_common.launch" pass_all_args="true">
     <arg name="use_tool_communication" value="false"/>
   </include>
 
-  <node pkg="robotiq_3f_gripper_control" name="Robotiq3FGripperTcpNode" type="Robotiq3FGripperTcpNode.py" output="screen">
-    <param name="ip" value="192.168.1.140"/>
-  </node>
+  <node name="robotiq_robot_state_publisher" pkg="robotiq_3f_gripper_joint_state_publisher" type="robotiq_3f_gripper_joint_states"/>
+  <node name="robotiq_robot_controller" pkg="robotiq_3f_gripper_control" type="Robotiq3FGripperTcpNode.py" args="192.168.1.140"/>
+
+  <node name="ptu_joint_states" pkg="ptu" type="ptu_joint_state.py" required="false" output="screen"/>
+
+  <include file="$(find our_moveit_config)/launch/move_group.launch"/>
+  <include file="$(find our_moveit_config)/launch/moveit_rviz.launch">
+    <arg name="rviz_config" value="$(find our_moveit_config)/launch/moveit.rviz"/>
+  </include>
 
 </launch>
