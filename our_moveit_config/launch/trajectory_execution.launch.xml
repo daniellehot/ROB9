@@ -17,6 +17,6 @@
 
   <!-- Load the robot specific controller manager; this sets the moveit_controller_manager ROS parameter -->
   <arg name="moveit_controller_manager" default="ur_dummy" />
-  <include file="$(find our_moveit_config)/launch/$(arg moveit_controller_manager)_moveit_controller_manager.launch.xml"/>
+  <include file="$(find ROB9)/our_moveit_config/launch/$(arg moveit_controller_manager)_moveit_controller_manager.launch.xml"/>
 
 </launch>
