@@ -23,6 +23,7 @@
   <node name="robotiq_robot_controller" pkg="robotiq_3f_gripper_control" type="Robotiq3FGripperTcpNode.py" args="192.168.1.140"/>
 
   <node name="ptu_joint_states" pkg="ptu" type="ptu_joint_state.py" required="false" output="screen"/>
+  <node name="realsense_service" pkg="realsense_service" type="server.py" required="false" output="screen"/>
 
   <!-- <include file="$(find ROB9)/our_moveit_config/launch/move_group.launch"/>
   <include file="$(find ROB9)/our_moveit_config/launch/moveit_rviz.launch">
