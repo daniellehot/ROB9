@@ -10,7 +10,7 @@ from realsense_service.srv import *
 import numpy as np
 import cv2
 
-capture_new_scene = False
+capture_new_scene = True
 
 def captureNewScene():
     rospy.wait_for_service("/sensors/realsense/capture")

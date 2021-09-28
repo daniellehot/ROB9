@@ -16,7 +16,7 @@
     <arg name="load_robot_description" value="true"/>
   </include> -->
 
-  <param name="robot_description" command="$(find xacro)/xacro $(find ROB9)/urdf/onearm_table_finger.urdf.xacro
+  <param name="robot_description" command="$(find xacro)/xacro $(find rob9)/urdf/onearm_table_finger.urdf.xacro
     joint_limit_params:=$(arg joint_limit_params)
     kinematics_params:=$(arg kinematics_params)
     physical_params:=$(arg physical_params)
