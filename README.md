@@ -1,6 +1,6 @@
 ## STILL WORK IN PROGRESS
 # ROB9 semester project: Robot-to-human affordance handover
-### Albert Christensen, Daniel Lehotsky and Marius Jørgensen
+##### Albert Christensen, Daniel Lehotsky and Marius Jørgensen
 
 ---
 This repository contains the implementation of the ROB9 semester project robot-to-human affordance handover's implementation at Aalborg University
@@ -54,6 +54,7 @@ git clone https://github.com/daniellehot/ROB9.git
 cd ..
 catkin_make -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-11.4 -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_BUILD_TYPE=Release
 source devel/setup.bash
+```
 
 ### Usage
 
