@@ -166,6 +166,7 @@ include_directories(
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
 # install(TARGETS ${PROJECT_NAME}_node
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+#   PROGRAMS affordancenet.sh
 # )
 
 ## Mark libraries for installation
@@ -202,3 +203,8 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+install(
+  PROGRAMS affordancenet.sh
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
