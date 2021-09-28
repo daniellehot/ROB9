@@ -10,16 +10,17 @@ from math import pi
 # from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PoseStamped
 from moveit_commander.conversions import pose_to_list
+import tf
 import tf2_ros
 import tf2_geometry_msgs
 
 def transform_frame(msg):
-    tf_buffer = tf2_ros.Buffer()
-    tf_listener = tf2_ros.TransformListener(tf_buffer)
+    #tf_buffer = tf2_ros.Buffer()
+    #tf_listener = tf2_ros.TransformListener(tf_buffer)
     transformed_pose_msg = geometry_msgs.msg.PoseStamped()
-    msg.header.stamp = rospy.Time.now()
+    #msg.header.stamp = rospy.Time.now()
     print(msg)
-    print(tf_buffer.transform(msg, "/right_ee_link"))
+    print(tf_buffer.transform(msg, "right_ee_link"))
     """
     try:
         trans = tf_buffer.lookup_transform("world", "right_ee_link", rospy.Time())
@@ -98,9 +99,6 @@ def callback(msg):
 
     transform_frame(msg)
 
-
-
-
 def subscriber():
     rospy.init_node('moveit_subscriber', anonymous=True)
     rospy.Subscriber('pose_to_reach', PoseStamped, callback)
@@ -108,6 +106,10 @@ def subscriber():
 
 if __name__ == '__main__':
     try:
-        subscriber()
+        rospy.init_node('moveit_subscriber', anonymous=True)
+        rospy.Subscriber('pose_to_reach', PoseStamped, callback)
+        tf_buffer = tf2_ros.Buffer()
+        tf_listener = tf2_ros.TransformListener(tf_buffer)
+        rospy.spin()
     except rospy.ROSInterruptException:
         pass
