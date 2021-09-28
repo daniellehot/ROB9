@@ -6,10 +6,28 @@ import moveit_commander
 import moveit_msgs.msg
 import geometry_msgs.msg
 from math import pi
-from std_msgs.msg import String
+#from std_msgs.msg import String
 # from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PoseStamped
 from moveit_commander.conversions import pose_to_list
+import tf2_ros
+import tf2_geometry_msgs
+
+def transform_frame(msg):
+    tf_buffer = tf2_ros.Buffer()
+    tf_listener = tf2_ros.TransformListener(tf_buffer)
+    transformed_pose_msg = geometry_msgs.msg.PoseStamped()
+    msg.header.stamp = rospy.Time.now()
+    print(msg)
+    print(tf_buffer.transform(msg, "/right_ee_link"))
+    """
+    try:
+        trans = tf_buffer.lookup_transform("world", "right_ee_link", rospy.Time())
+        print(trans)
+    except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+        print("exception")
+        pass
+    """
 
 def send_goal_ee_pos(msg, move_group):
     """
@@ -75,7 +93,12 @@ def send_goal_pos():
 def callback(msg):
     moveit_commander.roscpp_initialize(sys.argv)
     move_group = moveit_commander.MoveGroupCommander("manipulator")
-    send_goal_ee_pos(msg,move_group)
+    print(msg)
+    #send_goal_ee_pos(msg,move_group)
+
+    transform_frame(msg)
+
+
 
 
 def subscriber():

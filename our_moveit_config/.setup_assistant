@@ -1,6 +1,6 @@
 moveit_setup_assistant_config:
   URDF:
-    package: ROB9
+    package: rob9
     relative_path: urdf/onearm.urdf.xacro
     xacro_args: ""
   SRDF:
