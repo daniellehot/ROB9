@@ -2,7 +2,11 @@
 # ROB9 semester project: Robot-to-human affordance handover
 ##### Albert Christensen, Daniel Lehotsky and Marius Jørgensen
 
+---
 This repository contains the implementation of the ROB9 semester project robot-to-human affordance handover's implementation at Aalborg University
+
+---
+
 
 ## Installation instructions
 
