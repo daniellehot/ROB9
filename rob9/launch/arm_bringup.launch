@@ -29,6 +29,10 @@
   <include file="$(find our_moveit_config)/launch/moveit_rviz.launch">
     <arg name="rviz_config" value="$(find our_moveit_config)/launch/moveit.rviz"/>
   </include>
+  <node name="move_to_goal" pkg="moveit_scripts" type="move_to_goal.py"/>
+
   <node name="affordancenet" pkg="rob9" type="affordancenet.sh" output="screen" />
+
+
 
 </launch>

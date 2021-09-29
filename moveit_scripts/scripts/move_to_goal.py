@@ -6,56 +6,53 @@ import moveit_commander
 import moveit_msgs.msg
 import geometry_msgs.msg
 from math import pi
-#from std_msgs.msg import String
-# from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PoseStamped
 from moveit_commander.conversions import pose_to_list
-import tf
 import tf2_ros
 import tf2_geometry_msgs
 
 def transform_frame(msg):
-    #tf_buffer = tf2_ros.Buffer()
-    #tf_listener = tf2_ros.TransformListener(tf_buffer)
     transformed_pose_msg = geometry_msgs.msg.PoseStamped()
-    #msg.header.stamp = rospy.Time.now()
-    print(msg)
-    print(tf_buffer.transform(msg, "right_ee_link"))
-    """
     try:
-        trans = tf_buffer.lookup_transform("world", "right_ee_link", rospy.Time())
-        print(trans)
+        transformed_pose_msg = tf_buffer.transform(msg, "world")
+        send_goal_ee_pos(transformed_pose_msg)
     except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-        print("exception")
         pass
-    """
 
-def send_goal_ee_pos(msg, move_group):
-    """
-    current_pose = move_group.get_current_pose()
-    print(current_pose)
-    print('======================================')
-    print(msg)
-    pose_goal = geometry_msgs.msg.Pose()
-    pose_goal.orientation = current_pose.pose.orientation
-    pose_goal.position.x = current_pose.pose.position.x
-    pose_goal.position.y = current_pose.pose.position.y
-    pose_goal.position.z = current_pose.pose.position.z + 0.2
-    """
-    pose_goal = geometry_msgs.msg.PoseStamped()
-    pose_goal.header.frame_id = "world"
-    pose_goal.header.stamp = rospy.Time.now()
-    pose_goal.pose.orientation= msg.pose.orientation
-    pose_goal.pose.position = msg.pose.position
-    print(pose_goal)
+def send_goal_ee_pos(msg):
     print("Sending the goal pose")
-    move_group.set_pose_target(pose_goal)
+    print(msg)
+    move_group.set_pose_target(msg)
     plan = move_group.go(wait=True)
     move_group.stop()
     move_group.clear_pose_targets()
     print("Done")
 
 
+def callback(msg):
+    print("Callback", msg)
+    transform_frame(msg)
+
+
+if __name__ == '__main__':
+    rospy.init_node('moveit_subscriber', anonymous=True)
+    rospy.Subscriber('pose_to_reach', PoseStamped, callback)
+
+    moveit_commander.roscpp_initialize(sys.argv)
+    move_group = moveit_commander.MoveGroupCommander("manipulator")
+    display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
+                                                   moveit_msgs.msg.DisplayTrajectory,
+                                                   queue_size=20)
+
+    tf_buffer = tf2_ros.Buffer()
+    tf_listener = tf2_ros.TransformListener(tf_buffer)
+
+    try:
+        rospy.spin()
+    except rospy.ROSInterruptException:
+        pass
+
+"""
 def send_goal_joint_pos():
     # We can get the joint values from the group and adjust some of the values:
     joint_goal = move_group.get_current_joint_values()
@@ -85,31 +82,4 @@ def send_goal_pos():
 
     group_name = "manipulator"
     move_group = moveit_commander.MoveGroupCommander(group_name)
-
-    display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
-                                                   moveit_msgs.msg.DisplayTrajectory,
-                                                   queue_size=20)
-    send_goal_ee_pos(move_group)
-
-def callback(msg):
-    moveit_commander.roscpp_initialize(sys.argv)
-    move_group = moveit_commander.MoveGroupCommander("manipulator")
-    print(msg)
-    #send_goal_ee_pos(msg,move_group)
-
-    transform_frame(msg)
-
-def subscriber():
-    rospy.init_node('moveit_subscriber', anonymous=True)
-    rospy.Subscriber('pose_to_reach', PoseStamped, callback)
-    rospy.spin()
-
-if __name__ == '__main__':
-    try:
-        rospy.init_node('moveit_subscriber', anonymous=True)
-        rospy.Subscriber('pose_to_reach', PoseStamped, callback)
-        tf_buffer = tf2_ros.Buffer()
-        tf_listener = tf2_ros.TransformListener(tf_buffer)
-        rospy.spin()
-    except rospy.ROSInterruptException:
-        pass
+"""
