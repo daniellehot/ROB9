@@ -16,7 +16,7 @@ from realsense_service.srv import *
 from geometry_msgs.msg import PoseStamped
 from scipy.spatial.transform import Rotation
 
-ROOT_DIR = '/home/ros/graspnet-baseline/'  # path to graspnet-baseline
+ROOT_DIR = '/graspnet/graspnet-baseline/'  # path to graspnet-baseline
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
 sys.path.append(os.path.join(ROOT_DIR, 'utils'))
 SCRIPT_DIR = os.path.normpath(__file__ + os.sep + os.pardir)
