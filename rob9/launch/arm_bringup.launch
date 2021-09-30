@@ -22,7 +22,8 @@
   <node name="robotiq_robot_state_publisher" pkg="robotiq_3f_gripper_joint_state_publisher" type="robotiq_3f_gripper_joint_states"/>
   <node name="robotiq_robot_controller" pkg="robotiq_3f_gripper_control" type="Robotiq3FGripperTcpNode.py" args="192.168.1.140"/>
 
-  <node name="ptu_joint_states" pkg="ptu" type="ptu_joint_state.py" required="false" output="screen"/>
+  <node name="start_ptu" pkg="ptu" type="start_ptu.py" required="true"/>
+  
   <node name="realsense_service" pkg="realsense_service" type="server.py" required="false" output="screen"/>
 
   <include file="$(find our_moveit_config)/launch/move_group.launch"/>
