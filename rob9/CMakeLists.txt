@@ -204,6 +204,6 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 install(
-  PROGRAMS affordancenet.sh
+  PROGRAMS affordancenet.sh graspnet.sh
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
