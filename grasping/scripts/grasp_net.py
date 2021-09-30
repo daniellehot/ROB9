@@ -149,6 +149,7 @@ def get_net():
 def get_and_process_data():
 
     workspace_mask = np.array(Image.open(SCRIPT_DIR+'/workspace_mask.png'))
+
     print('Get data from realsense...')
     captureRealsense()
     color_img = np.array(getRGB()) / 255
@@ -163,7 +164,7 @@ def get_and_process_data():
     cloud = create_point_cloud_from_depth_image(depth_img, camera, organized=True)
 
     # get valid points
-    mask = (workspace_mask & (depth_img > 0))
+    mask = (workspace_mask & (depth_img < 1000))
     cloud_masked = cloud[mask]
     color_masked = color_img[mask]
 
