@@ -56,8 +56,8 @@ def main():
         while not rospy.is_shutdown():
 
             new_msg = False
+            print('Waiting for go...')
             while not new_msg and not rospy.is_shutdown():
-                print('Waiting for go...')
                 rate.sleep()
 
             print('Processing data...')
