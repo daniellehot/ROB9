@@ -8,6 +8,7 @@ import argparse
 import numpy as np
 import open3d as o3d
 import scipy.io as scio
+from std_msgs.msg import Bool
 
 from PIL import Image
 from nav_msgs.msg import Path
@@ -16,7 +17,7 @@ from realsense_service.srv import *
 from geometry_msgs.msg import PoseStamped
 from scipy.spatial.transform import Rotation
 
-ROOT_DIR = '/graspnet/graspnet-baseline/'  # path to graspnet-baseline
+ROOT_DIR = '/home/ros/graspnet-baseline/'  # path to graspnet-baseline
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
 sys.path.append(os.path.join(ROOT_DIR, 'utils'))
 SCRIPT_DIR = os.path.normpath(__file__ + os.sep + os.pardir)
@@ -33,31 +34,56 @@ parser.add_argument('--collision_thresh', type=float, default=0.01, help='Collis
 parser.add_argument('--voxel_size', type=float, default=0.01, help='Voxel Size to process point clouds before collision detection [default: 0.01]')
 parser.add_argument('--cam_width', type=int, default=1280)
 parser.add_argument('--cam_height', type=int, default=720)
+parser.add_argument('--vis', help="Visualize result", action="store_true")
+parser.add_argument('--score', help="Score threshold", type=float, default=0.0)
+
 cfgs = parser.parse_args()
 
-
 def main():
+    global new_msg
 
     if not rospy.is_shutdown():
 
-        pub = rospy.Publisher('grasps', Path, queue_size=10)
+        print('Starting...')
         rospy.init_node('graspnet', anonymous=True)
+        pub = rospy.Publisher('grasps', Path, queue_size=10)
+        rospy.Subscriber("start_graspnet", Bool, sub_callback)
+        rate = rospy.Rate(5)
+
+        print('Loading network...')
         net = get_net()
 
         while not rospy.is_shutdown():
-            input("Press Enter to continue...")
+
+            new_msg = False
+            while not new_msg and not rospy.is_shutdown():
+                print('Waiting for go...')
+                rate.sleep()
+
+            print('Processing data...')
             end_points, cloud = get_and_process_data()
 
+            print('Processing image through graspnet...')
             gg = get_grasps(net, end_points)
             if cfgs.collision_thresh > 0:
                 gg = collision_detection(gg, np.array(cloud.points))
             gg.nms()
-            gg = remove_grasps_under_score(gg, 0.0) #  Score range between 0 and 2. Under 0.1 bad, over 0.7 good
+            gg = remove_grasps_under_score(gg, cfgs.score) #  Score range between 0 and 2. Under 0.1 bad, over 0.7 good
 
             msg = generate_ros_message(gg, nr_of_grasps=0)  # nr_grasps = 0 is use all grasps
 
             pub.publish(msg)
-            #vis_grasps(gg, cloud, nr_to_visualize=0)  # nr_to_vizualize = 0 is show all
+
+            if cfgs.viz:
+                print('Visualizing...')
+                vis_grasps(gg, cloud, nr_to_visualize=0)  # nr_to_vizualize = 0 is show all
+
+
+
+def sub_callback(data):
+    global new_msg
+    print('Received message')
+    new_msg = True
 
 
 def remove_grasps_under_score(gg, score_thresh):
@@ -121,13 +147,13 @@ def get_net():
 
 
 def get_and_process_data():
-    print('Processing image...')
-    workspace_mask = np.array(Image.open(SCRIPT_DIR+'/workspace_mask.png'))
 
+    workspace_mask = np.array(Image.open(SCRIPT_DIR+'/workspace_mask.png'))
+    print('Get data from realsense...')
     captureRealsense()
     color_img = np.array(getRGB()) / 255
     depth_img = getDepth()
-
+    print('Generate pointcloud...')
     # generate cloud
     fx = 637.598
     fy = 637.598
@@ -186,7 +212,7 @@ def vis_grasps(gg, cloud, nr_to_visualize):
     grasps = gg[:nr_to_visualize]
     if nr_to_visualize == 0:
         grasps = gg
-    grippers = gg.to_open3d_geometry_list()
+    grippers = grasps.to_open3d_geometry_list()
     o3d.visualization.draw_geometries([cloud, *grippers])
 
 
@@ -196,7 +222,7 @@ def captureRealsense():
     msg = capture()
     msg.data = True
     response = captureService(msg)
-    #print(response)
+    print(response)
 
 
 def getRGB():
