@@ -134,8 +134,8 @@ def get_net():
     # Init the model
     net = GraspNet(input_feature_dim=0, num_view=cfgs.num_view, num_angle=12, num_depth=4,
              cylinder_radius=0.05, hmin=-0.02, hmax_list=[0.01, 0.02, 0.03, 0.04], is_training=False)
-    #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    device = torch.device("cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    #device = torch.device("cpu")
     net.to(device)
     # Load checkpoint
     checkpoint = torch.load(cfgs.checkpoint_path)
@@ -185,8 +185,8 @@ def get_and_process_data():
     cloud.colors = o3d.utility.Vector3dVector(color_masked.astype(np.float32))
     end_points = dict()
     cloud_sampled = torch.from_numpy(cloud_sampled[np.newaxis].astype(np.float32))
-    #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    device = torch.device("cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    #device = torch.device("cpu")
     cloud_sampled = cloud_sampled.to(device)
     end_points['point_clouds'] = cloud_sampled
     end_points['cloud_colors'] = color_sampled
