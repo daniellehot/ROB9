@@ -3,11 +3,11 @@ import sys
 import copy
 import rospy
 import moveit_commander
-import moveit_msgs.msg
 from moveit_commander.conversions import pose_to_list
-# import geometry_msgs.msg
+import moveit_msgs.msg
+import geometry_msgs.msg
 from geometry_msgs.msg import PoseStamped
-# import std_msgs.msg
+import std_msgs.msg
 from std_msgs.msg import Int8
 from math import pi
 import tf2_ros
@@ -32,11 +32,15 @@ def transform_frame(msg):
 def send_goal_ee_pos(msg):
     print("Sending the goal pose")
     print(msg)
-    move_group.set_pose_target(msg)
-    plan = move_group.go(wait=True)
+    #move_group.set_pose_target(msg)
+    #plan = move_group.go(wait=True)
+
+    waypoint=[msg.pose]
+    (plan, fraction) = move_group.compute_cartesian_path(waypoint, 0.01, 0.0)
+    move_group.execute(plan, wait=True)
     move_group.stop()
     move_group.clear_pose_targets()
-    gripper_pub.publish(close_gripper_msg)
+    #gripper_pub.publish(close_gripper_msg)
     print("Done")
 
 
@@ -51,9 +55,9 @@ def reset_callback(msg):
         move_group.set_named_target("ready")
         plan = move_group.go(wait=True)
         move_group.stop()
-        gripper_pub.publish(reset_gripper_msg)
-        gripper_pub.publish(activate_gripper_msg)
-        gripper_pub.publish(pinch_gripper_msg)
+        #gripper_pub.publish(reset_gripper_msg)
+        #gripper_pub.publish(activate_gripper_msg)
+        #gripper_pub.publish(pinch_gripper_msg)
     else:
         print("Not a valid input")
 
@@ -88,7 +92,7 @@ if __name__ == '__main__':
 
     gripper_pub.publish(reset_gripper_msg)
     gripper_pub.publish(activate_gripper_msg)
-    gripper_pub.publish(pinch_gripper_msg)
+    #gripper_pub.publish(pinch_gripper_msg)
 
     try:
         rospy.spin()
