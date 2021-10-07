@@ -135,7 +135,7 @@ def generate_ros_message(gg, nr_of_grasps):
 
     grasps_msg = Path()
     grasps_msg.header.stamp = rospy.Time.now()
-    grasps_msg.header.frame_id = "Header"
+    grasps_msg.header.frame_id = "ptu_camera_color_optical_frame"
 
     seq = 0
     for grap in grasps:
