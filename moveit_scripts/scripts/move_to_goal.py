@@ -7,6 +7,7 @@ from moveit_commander.conversions import pose_to_list
 import moveit_msgs.msg
 import geometry_msgs.msg
 from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Pose
 import std_msgs.msg
 from std_msgs.msg import Int8
 from math import pi
@@ -20,6 +21,7 @@ def transform_frame(msg):
     transformed_pose_msg = tf_buffer.transform(msg, "world")
     print(transformed_pose_msg)
     send_goal_ee_pos(transformed_pose_msg)
+
     """
     try:
         transformed_pose_msg = tf_buffer.transform(msg, "world")
@@ -28,6 +30,29 @@ def transform_frame(msg):
     except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
         pass
     """
+
+def move_to_ready():
+    ready_pose_msg = geometry_msgs.msg.Pose()
+    ready_pose_msg.point.x = 0.4071
+    ready_pose_msg.point.y = 0.1361
+    ready_pose_msg.point.z = 1.6743
+    ready_pose_msg.orientation.x = -0.0575
+    ready_pose_msg.orientation.y = 0.4495
+    ready_pose_msg.orientation.z = 0.7546
+    ready_pose_msg.orientation.w = 0.4745
+
+    waypoint=[ready_pose_msg]
+    (plan, fraction) = move_group.compute_cartesian_path(waypoint, 0.01, 0.0)
+    move_group.execute(plan, wait=True)
+    move_group.stop()
+    move_group.clear_pose_targets()
+
+def send_trajectory_to_rviz(plan):
+    display_trajectory = moveit_msgs.msg.DisplayTrajectory()
+    display_trajectory.trajectory_start = robot.get_current_state()
+    display_trajectory.trajectory.append(plan)
+    display_trajectory_publisher.publish(display_trajectory);
+
 
 def send_goal_ee_pos(msg):
     print("Sending the goal pose")
@@ -40,6 +65,8 @@ def send_goal_ee_pos(msg):
     move_group.execute(plan, wait=True)
     move_group.stop()
     move_group.clear_pose_targets()
+    rospy.sleep(10.)
+    move_to_ready()
     #gripper_pub.publish(close_gripper_msg)
     print("Done")
 
