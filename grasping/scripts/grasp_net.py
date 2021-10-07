@@ -135,7 +135,7 @@ def generate_ros_message(gg, nr_of_grasps):
 
     grasps_msg = Path()
     grasps_msg.header.stamp = rospy.Time.now()
-    grasps_msg.header.frame_id = "ptu_camera_color_optical_frame"
+    grasps_msg.header.frame_id = "Header"
 
     seq = 0
     for grap in grasps:
@@ -285,14 +285,15 @@ def convertCloudFromOpen3dToRos(open3d_cloud, frame_id="odom"):
     # Set "header"
     header = Header()
     header.stamp = rospy.Time.now()
-    header.frame_id = frame_id
+    header.frame_id = "ptu_camera_color_optical_frame"
 
     # Set "fields" and "cloud_data"
     points=np.asarray(open3d_cloud.points)
-    if not open3d_cloud.colors: # XYZ only
-        fields=FIELDS_XYZ
-        cloud_data=points
+    #if not open3d_cloud.colors: # XYZ only
+    fields=FIELDS_XYZ
+    cloud_data=points
 
+    """
     else: # XYZ + RGB
         fields=FIELDS_XYZRGB
         # -- Change rgb color from "three float" to "one 24-byte int"
@@ -304,6 +305,7 @@ def convertCloudFromOpen3dToRos(open3d_cloud, frame_id="odom"):
         print(points)
         cloud_data=np.c_[points, colors]
         print(cloud_data)
+    """
 
     # create ros_cloud
     return pc2.create_cloud(header, fields, cloud_data)
