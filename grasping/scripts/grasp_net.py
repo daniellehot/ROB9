@@ -20,6 +20,7 @@ from scipy.spatial.transform import Rotation
 from std_msgs.msg import Header
 from sensor_msgs.msg import PointCloud2, PointField
 import sensor_msgs.point_cloud2 as pc2
+from open3d_ros_helper import open3d_ros_helper as orh
 
 ROOT_DIR = '/graspnet/graspnet-baseline/'  # path to graspnet-baseline
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
@@ -50,7 +51,7 @@ FIELDS_XYZ = [
     PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
 ]
 FIELDS_XYZRGB = FIELDS_XYZ + \
-    [PointField(name='rgb', offset=12, datatype=PointField.FLOAT32, count=1)]
+    [PointField(name='rgb', offset=12, datatype=PointField.UINT32, count=1)]
 
 # Bit operations
 BIT_MOVE_16 = 2**16
@@ -99,7 +100,8 @@ def main():
 
             pub.publish(msg)
 
-            ros_cloud = convertCloudFromOpen3dToRos(cloud)
+            #ros_cloud = convertCloudFromOpen3dToRos(cloud)
+            ros_cloud = orh.o3dpc_to_rospc(o3dpc, frame_id="ptu_camera_color_optical_frame", stamp=rospy.Time.now())
             pub_scene.publish(ros_cloud)
 
             #vis_grasps(gg, cloud, nr_to_visualize=0)  # nr_to_vizualize = 0 is show all
