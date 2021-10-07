@@ -301,6 +301,7 @@ def convertCloudFromOpen3dToRos(open3d_cloud, frame_id="odom"):
         #colors = np.floor(np.asarray(open3d_cloud.colors)*255)
         colors = colors[:,0] * BIT_MOVE_16 +colors[:,1] * BIT_MOVE_8 + colors[:,2]
         print(colors)
+        print(points)
         cloud_data=np.c_[points, colors]
         print(cloud_data)
 
