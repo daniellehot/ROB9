@@ -100,8 +100,8 @@ def main():
 
             pub.publish(msg)
 
-            #ros_cloud = convertCloudFromOpen3dToRos(cloud)
-            ros_cloud = orh.o3dpc_to_rospc(o3dpc, frame_id="ptu_camera_color_optical_frame", stamp=rospy.Time.now())
+            ros_cloud = convertCloudFromOpen3dToRos(cloud)
+            #ros_cloud = orh.o3dpc_to_rospc(o3dpc, frame_id="ptu_camera_color_optical_frame", stamp=rospy.Time.now())
             pub_scene.publish(ros_cloud)
 
             #vis_grasps(gg, cloud, nr_to_visualize=0)  # nr_to_vizualize = 0 is show all
@@ -303,9 +303,13 @@ def convertCloudFromOpen3dToRos(open3d_cloud, frame_id="odom"):
         colors = np.floor(np.asarray(open3d_cloud.colors)*255) # nx3 matrix
         #colors = np.floor(np.asarray(open3d_cloud.colors)*255)
         colors = colors[:,0] * BIT_MOVE_16 +colors[:,1] * BIT_MOVE_8 + colors[:,2]
+        colors = colors.astype(np.uint32)
         print(colors)
+        print(colors.dtype)
+        print(points.dtype)
         print(points)
-        cloud_data=np.c_[points, colors]
+        cloud_data= np.c_[points, colors]
+        print(cloud_data.dtype)
         print(cloud_data)
 
 
