@@ -74,9 +74,7 @@ def main():
 
             pub.publish(msg)
 
-            if cfgs.vis:
-                print('Visualizing...')
-                vis_grasps(gg, cloud, nr_to_visualize=0)  # nr_to_vizualize = 0 is show all
+            vis_grasps(gg, cloud, nr_to_visualize=0)  # nr_to_vizualize = 0 is show all
 
 
 
@@ -247,9 +245,6 @@ def getDepth():
     w = response.width.data
     h = response.height.data
     depthImg = np.asarray(response.img.data).reshape((h, w)) # use this depth image
-    vis0 = np.asarray(response.img.data).reshape((h, w)) / 256.0
-    vis0 = vis0.astype(np.ubyte)
-    vis0 = np.uint8(255-vis0) # only for visualization purposes
     return depthImg
 
 
