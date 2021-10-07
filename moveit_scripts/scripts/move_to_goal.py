@@ -51,7 +51,8 @@ def send_trajectory_to_rviz(plan):
     display_trajectory = moveit_msgs.msg.DisplayTrajectory()
     display_trajectory.trajectory_start = robot.get_current_state()
     display_trajectory.trajectory.append(plan)
-    display_trajectory_publisher.publish(display_trajectory);
+    display_trajectory_publisher.publish(display_trajectory)
+
 
 
 def send_goal_ee_pos(msg):
@@ -62,10 +63,14 @@ def send_goal_ee_pos(msg):
 
     waypoint=[msg.pose]
     (plan, fraction) = move_group.compute_cartesian_path(waypoint, 0.01, 0.0)
+    send_trajectory_to_rviz(plan)
+    rospy.sleep(10.)
+
     move_group.execute(plan, wait=True)
     move_group.stop()
     move_group.clear_pose_targets()
     rospy.sleep(10.)
+
     move_to_ready()
     #gripper_pub.publish(close_gripper_msg)
     print("Done")
