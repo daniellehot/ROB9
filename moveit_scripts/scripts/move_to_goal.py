@@ -3,11 +3,12 @@ import sys
 import copy
 import rospy
 import moveit_commander
-import moveit_msgs.msg
 from moveit_commander.conversions import pose_to_list
-# import geometry_msgs.msg
+import moveit_msgs.msg
+import geometry_msgs.msg
 from geometry_msgs.msg import PoseStamped
-# import std_msgs.msg
+from geometry_msgs.msg import Pose
+import std_msgs.msg
 from std_msgs.msg import Int8
 from math import pi
 import tf2_ros
@@ -20,6 +21,7 @@ def transform_frame(msg):
     transformed_pose_msg = tf_buffer.transform(msg, "world")
     print(transformed_pose_msg)
     send_goal_ee_pos(transformed_pose_msg)
+
     """
     try:
         transformed_pose_msg = tf_buffer.transform(msg, "world")
@@ -29,14 +31,48 @@ def transform_frame(msg):
         pass
     """
 
+def move_to_ready():
+    ready_pose_msg = geometry_msgs.msg.Pose()
+    ready_pose_msg.point.x = 0.4071
+    ready_pose_msg.point.y = 0.1361
+    ready_pose_msg.point.z = 1.6743
+    ready_pose_msg.orientation.x = -0.0575
+    ready_pose_msg.orientation.y = 0.4495
+    ready_pose_msg.orientation.z = 0.7546
+    ready_pose_msg.orientation.w = 0.4745
+
+    waypoint=[ready_pose_msg]
+    (plan, fraction) = move_group.compute_cartesian_path(waypoint, 0.01, 0.0)
+    move_group.execute(plan, wait=True)
+    move_group.stop()
+    move_group.clear_pose_targets()
+
+def send_trajectory_to_rviz(plan):
+    display_trajectory = moveit_msgs.msg.DisplayTrajectory()
+    display_trajectory.trajectory_start = robot.get_current_state()
+    display_trajectory.trajectory.append(plan)
+    display_trajectory_publisher.publish(display_trajectory)
+
+
+
 def send_goal_ee_pos(msg):
     print("Sending the goal pose")
     print(msg)
-    move_group.set_pose_target(msg)
-    plan = move_group.go(wait=True)
+    #move_group.set_pose_target(msg)
+    #plan = move_group.go(wait=True)
+
+    waypoint=[msg.pose]
+    (plan, fraction) = move_group.compute_cartesian_path(waypoint, 0.01, 0.0)
+    send_trajectory_to_rviz(plan)
+    rospy.sleep(10.)
+
+    move_group.execute(plan, wait=True)
     move_group.stop()
     move_group.clear_pose_targets()
-    gripper_pub.publish(close_gripper_msg)
+    rospy.sleep(10.)
+
+    move_to_ready()
+    #gripper_pub.publish(close_gripper_msg)
     print("Done")
 
 
@@ -51,9 +87,9 @@ def reset_callback(msg):
         move_group.set_named_target("ready")
         plan = move_group.go(wait=True)
         move_group.stop()
-        gripper_pub.publish(reset_gripper_msg)
-        gripper_pub.publish(activate_gripper_msg)
-        gripper_pub.publish(pinch_gripper_msg)
+        #gripper_pub.publish(reset_gripper_msg)
+        #gripper_pub.publish(activate_gripper_msg)
+        #gripper_pub.publish(pinch_gripper_msg)
     else:
         print("Not a valid input")
 
@@ -88,7 +124,7 @@ if __name__ == '__main__':
 
     gripper_pub.publish(reset_gripper_msg)
     gripper_pub.publish(activate_gripper_msg)
-    gripper_pub.publish(pinch_gripper_msg)
+    #gripper_pub.publish(pinch_gripper_msg)
 
     try:
         rospy.spin()

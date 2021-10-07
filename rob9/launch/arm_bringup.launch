@@ -35,8 +35,8 @@
   <node name="move_to_goal" pkg="moveit_scripts" type="move_to_goal.py"/>
 
 
-  <node name="affordancenet" pkg="rob9" type="affordancenet.sh" required="false"/>
-  <node name="graspnet" pkg="rob9" type="graspnet.sh" required="false"/>
+  <!-- <node name="affordancenet" pkg="rob9" type="affordancenet.sh" required="false"/> -->
+  <!-- <node name="graspnet" pkg="rob9" type="graspnet.sh" required="false"/> -->
 
 
 </launch>

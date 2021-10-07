@@ -86,7 +86,7 @@
 
   <xacro:include filename="$(find dummy)/urdf/robotiq-3f-gripper_articulated.urdf.xacro"/>
   <joint name="s_model_gripper" type="fixed">
-    <origin xyz="0.0 0.0 0.0" rpy="${pi} 0 0"/>
+    <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
     <parent link="flange" />
     <child link="s_connector_plate" />
   </joint>

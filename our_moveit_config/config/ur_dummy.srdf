@@ -47,6 +47,7 @@
     <disable_collisions link1="finger_1_link_0" link2="finger_1_link_2" reason="Never" />
     <disable_collisions link1="finger_1_link_0" link2="finger_1_link_3" reason="Never" />
     <disable_collisions link1="finger_1_link_0" link2="finger_2_link_0" reason="Never" />
+    <disable_collisions link1="finger_1_link_0" link2="gripper_connector_box" reason="Never" />
     <disable_collisions link1="finger_1_link_0" link2="palm" reason="Adjacent" />
     <disable_collisions link1="finger_1_link_0" link2="right_ee_link" reason="Never" />
     <disable_collisions link1="finger_1_link_0" link2="s_connector_plate" reason="Never" />
@@ -58,7 +59,9 @@
     <disable_collisions link1="finger_1_link_1" link2="finger_2_link_1" reason="Never" />
     <disable_collisions link1="finger_1_link_1" link2="finger_2_link_2" reason="Never" />
     <disable_collisions link1="finger_1_link_1" link2="finger_2_link_3" reason="Never" />
+    <disable_collisions link1="finger_1_link_1" link2="gripper_connector_box" reason="Default" />
     <disable_collisions link1="finger_1_link_1" link2="palm" reason="Default" />
+    <disable_collisions link1="finger_1_link_1" link2="ptu_camera_link" reason="Never" />
     <disable_collisions link1="finger_1_link_1" link2="right_ee_link" reason="Never" />
     <disable_collisions link1="finger_1_link_1" link2="s_connector_cylinder" reason="Never" />
     <disable_collisions link1="finger_1_link_1" link2="s_connector_plate" reason="Never" />
@@ -70,6 +73,8 @@
     <disable_collisions link1="finger_1_link_2" link2="finger_2_link_1" reason="Never" />
     <disable_collisions link1="finger_1_link_2" link2="finger_2_link_2" reason="Never" />
     <disable_collisions link1="finger_1_link_2" link2="finger_2_link_3" reason="Never" />
+    <disable_collisions link1="finger_1_link_2" link2="gripper_connector_box" reason="Never" />
+    <disable_collisions link1="finger_1_link_2" link2="ptu_camera_link" reason="Never" />
     <disable_collisions link1="finger_1_link_2" link2="right_ee_link" reason="Never" />
     <disable_collisions link1="finger_1_link_2" link2="s_connector_plate" reason="Never" />
     <disable_collisions link1="finger_1_link_2" link2="wrist_1_link" reason="Never" />
@@ -79,6 +84,7 @@
     <disable_collisions link1="finger_1_link_3" link2="finger_2_link_1" reason="Never" />
     <disable_collisions link1="finger_1_link_3" link2="finger_2_link_2" reason="Never" />
     <disable_collisions link1="finger_1_link_3" link2="finger_2_link_3" reason="Never" />
+    <disable_collisions link1="finger_1_link_3" link2="ptu_camera_link" reason="Never" />
     <disable_collisions link1="finger_1_link_3" link2="right_ee_link" reason="Never" />
     <disable_collisions link1="finger_1_link_3" link2="wrist_1_link" reason="Never" />
     <disable_collisions link1="finger_1_link_3" link2="wrist_2_link" reason="Never" />
@@ -90,8 +96,8 @@
     <disable_collisions link1="finger_2_link_0" link2="finger_middle_link_1" reason="Never" />
     <disable_collisions link1="finger_2_link_0" link2="finger_middle_link_2" reason="Never" />
     <disable_collisions link1="finger_2_link_0" link2="finger_middle_link_3" reason="Never" />
+    <disable_collisions link1="finger_2_link_0" link2="gripper_connector_box" reason="Never" />
     <disable_collisions link1="finger_2_link_0" link2="palm" reason="Adjacent" />
-    <disable_collisions link1="finger_2_link_0" link2="ptu_camera_link" reason="Never" />
     <disable_collisions link1="finger_2_link_0" link2="right_ee_link" reason="Never" />
     <disable_collisions link1="finger_2_link_0" link2="s_connector_cylinder" reason="Never" />
     <disable_collisions link1="finger_2_link_0" link2="s_connector_plate" reason="Never" />
@@ -100,6 +106,7 @@
     <disable_collisions link1="finger_2_link_0" link2="wrist_3_link" reason="Never" />
     <disable_collisions link1="finger_2_link_1" link2="finger_2_link_2" reason="Adjacent" />
     <disable_collisions link1="finger_2_link_1" link2="finger_middle_link_0" reason="Never" />
+    <disable_collisions link1="finger_2_link_1" link2="gripper_connector_box" reason="Never" />
     <disable_collisions link1="finger_2_link_1" link2="palm" reason="Default" />
     <disable_collisions link1="finger_2_link_1" link2="right_ee_link" reason="Never" />
     <disable_collisions link1="finger_2_link_1" link2="s_connector_cylinder" reason="Never" />
@@ -109,6 +116,7 @@
     <disable_collisions link1="finger_2_link_1" link2="wrist_3_link" reason="Never" />
     <disable_collisions link1="finger_2_link_2" link2="finger_2_link_3" reason="Adjacent" />
     <disable_collisions link1="finger_2_link_2" link2="finger_middle_link_0" reason="Never" />
+    <disable_collisions link1="finger_2_link_2" link2="gripper_connector_box" reason="Never" />
     <disable_collisions link1="finger_2_link_2" link2="right_ee_link" reason="Never" />
     <disable_collisions link1="finger_2_link_2" link2="s_connector_plate" reason="Never" />
     <disable_collisions link1="finger_2_link_2" link2="wrist_1_link" reason="Never" />
@@ -122,7 +130,9 @@
     <disable_collisions link1="finger_middle_link_0" link2="finger_middle_link_1" reason="Adjacent" />
     <disable_collisions link1="finger_middle_link_0" link2="finger_middle_link_2" reason="Never" />
     <disable_collisions link1="finger_middle_link_0" link2="finger_middle_link_3" reason="Never" />
+    <disable_collisions link1="finger_middle_link_0" link2="gripper_connector_box" reason="Never" />
     <disable_collisions link1="finger_middle_link_0" link2="palm" reason="Adjacent" />
+    <disable_collisions link1="finger_middle_link_0" link2="ptu_camera_link" reason="Never" />
     <disable_collisions link1="finger_middle_link_0" link2="right_ee_link" reason="Never" />
     <disable_collisions link1="finger_middle_link_0" link2="s_connector_cylinder" reason="Never" />
     <disable_collisions link1="finger_middle_link_0" link2="s_connector_plate" reason="Never" />
@@ -130,6 +140,7 @@
     <disable_collisions link1="finger_middle_link_0" link2="wrist_2_link" reason="Never" />
     <disable_collisions link1="finger_middle_link_0" link2="wrist_3_link" reason="Never" />
     <disable_collisions link1="finger_middle_link_1" link2="finger_middle_link_2" reason="Adjacent" />
+    <disable_collisions link1="finger_middle_link_1" link2="gripper_connector_box" reason="Never" />
     <disable_collisions link1="finger_middle_link_1" link2="palm" reason="Default" />
     <disable_collisions link1="finger_middle_link_1" link2="right_ee_link" reason="Never" />
     <disable_collisions link1="finger_middle_link_1" link2="s_connector_cylinder" reason="Never" />
@@ -138,6 +149,7 @@
     <disable_collisions link1="finger_middle_link_1" link2="wrist_2_link" reason="Never" />
     <disable_collisions link1="finger_middle_link_1" link2="wrist_3_link" reason="Never" />
     <disable_collisions link1="finger_middle_link_2" link2="finger_middle_link_3" reason="Adjacent" />
+    <disable_collisions link1="finger_middle_link_2" link2="gripper_connector_box" reason="Never" />
     <disable_collisions link1="finger_middle_link_2" link2="right_ee_link" reason="Never" />
     <disable_collisions link1="finger_middle_link_2" link2="s_connector_plate" reason="Never" />
     <disable_collisions link1="finger_middle_link_2" link2="wrist_1_link" reason="Never" />
@@ -150,6 +162,13 @@
     <disable_collisions link1="forearm_link" link2="right_ee_link" reason="Never" />
     <disable_collisions link1="forearm_link" link2="upper_arm_link" reason="Adjacent" />
     <disable_collisions link1="forearm_link" link2="wrist_1_link" reason="Adjacent" />
+    <disable_collisions link1="gripper_connector_box" link2="palm" reason="Default" />
+    <disable_collisions link1="gripper_connector_box" link2="right_ee_link" reason="Never" />
+    <disable_collisions link1="gripper_connector_box" link2="s_connector_cylinder" reason="Never" />
+    <disable_collisions link1="gripper_connector_box" link2="s_connector_plate" reason="Adjacent" />
+    <disable_collisions link1="gripper_connector_box" link2="wrist_1_link" reason="Never" />
+    <disable_collisions link1="gripper_connector_box" link2="wrist_2_link" reason="Never" />
+    <disable_collisions link1="gripper_connector_box" link2="wrist_3_link" reason="Never" />
     <disable_collisions link1="palm" link2="right_ee_link" reason="Adjacent" />
     <disable_collisions link1="palm" link2="s_connector_cylinder" reason="Adjacent" />
     <disable_collisions link1="palm" link2="s_connector_plate" reason="Never" />
