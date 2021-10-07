@@ -50,7 +50,7 @@ FIELDS_XYZ = [
     PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
 ]
 FIELDS_XYZRGB = FIELDS_XYZ + \
-    [PointField(name='rgb', offset=12, datatype=PointField.UINT32, count=1)]
+    [PointField(name='rgb', offset=12, datatype=PointField.FLOAT32, count=1)]
 
 # Bit operations
 BIT_MOVE_16 = 2**16
