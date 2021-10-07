@@ -298,9 +298,9 @@ def convertCloudFromOpen3dToRos(open3d_cloud, frame_id="odom"):
         # -- Change rgb color from "three float" to "one 24-byte int"
         # 0x00FFFFFF is white, 0x00000000 is black.
         #colors = np.floor(np.asarray(open3d_cloud.colors)*255) # nx3 matrix
-        colors = np.floor(np.asarray(open3d_cloud.colors))
-        print(colors)
+        colors = np.floor(np.asarray(open3d_cloud.colors)*255)
         colors = colors[:,0] * BIT_MOVE_16 +colors[:,1] * BIT_MOVE_8 + colors[:,2]
+        colors = colors.astype(np.uint8)
         cloud_data=np.c_[points, colors]
 
     # create ros_cloud
