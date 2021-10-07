@@ -289,18 +289,18 @@ def convertCloudFromOpen3dToRos(open3d_cloud, frame_id="odom"):
 
     # Set "fields" and "cloud_data"
     points=np.asarray(open3d_cloud.points)
-    #if not open3d_cloud.colors: # XYZ only
-    fields=FIELDS_XYZ
-    cloud_data=points
-    """
+    if not open3d_cloud.colors: # XYZ only
+        fields=FIELDS_XYZ
+        cloud_data=points
+
     else: # XYZ + RGB
         fields=FIELDS_XYZRGB
         # -- Change rgb color from "three float" to "one 24-byte int"
         # 0x00FFFFFF is white, 0x00000000 is black.
-        colors = np.floor(np.asarray(open3d_cloud.colors)*255) # nx3 matrix
+        #colors = np.floor(np.asarray(open3d_cloud.colors)*255) # nx3 matrix
+        colors = np.floor(np.asarray(open3d_cloud.colors))
         colors = colors[:,0] * BIT_MOVE_16 +colors[:,1] * BIT_MOVE_8 + colors[:,2]
         cloud_data=np.c_[points, colors]
-    """
 
     # create ros_cloud
     return pc2.create_cloud(header, fields, cloud_data)
