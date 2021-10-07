@@ -8,6 +8,7 @@ import argparse
 import numpy as np
 import open3d as o3d
 import scipy.io as scio
+from ctypes import * # convert float to uint32
 from std_msgs.msg import Bool
 
 from PIL import Image
@@ -16,6 +17,9 @@ from graspnetAPI import GraspGroup
 from realsense_service.srv import *
 from geometry_msgs.msg import PoseStamped
 from scipy.spatial.transform import Rotation
+from std_msgs.msg import Header
+from sensor_msgs.msg import PointCloud2, PointField
+import sensor_msgs.point_cloud2 as pc2
 
 ROOT_DIR = '/graspnet/graspnet-baseline/'  # path to graspnet-baseline
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
