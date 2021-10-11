@@ -1,17 +1,19 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 
 from realsense_service.srv import intrinsics, intrinsicsResponse
 from realsense_service.srv import capture, captureResponse
 from realsense_service.srv import depth, depthResponse
 from realsense_service.srv import rgb, rgbResponse
-from std_msgs.msg import Header
+from std_msgs.msg import Header, Float32MultiArray
 from sensor_msgs.msg import Image, PointCloud2, PointField
 import sensor_msgs.point_cloud2 as pc2
 import rospy
 import pyrealsense2 as rs
 import numpy as np
 from cv_bridge import CvBridge
+import time
+from ctypes import * # convert float to uint32
 
 class CameraInfo():
     # from https://github.com/graspnet/graspnet-baseline/blob/main/utils/data_utils.py
@@ -47,13 +49,14 @@ def create_point_cloud_from_depth_image(depth, camera, organized=True):
     points_x = (xmap - camera.cx) * points_z / camera.fx
     points_y = (ymap - camera.cy) * points_z / camera.fy
     cloudGeom = np.stack([points_x, points_y, points_z], axis=-1)
-    cloud = np.reshape(cloudGeom, (-1,3))
+    cloudPoints = np.reshape(cloudGeom, (-1,3)).astype(np.float32)
 
     # convert data
-    #cloud = o3d.geometry.PointCloud()
-    #cloud.points = o3d.utility.Vector3dVector(cloudGeom)
-    #cloud.colors = o3d.utility.Vector3dVector(color_masked.astype(np.float32))
-    return cloud
+    cloudPoints = cloudPoints[cloudPoints[:,2] < 1.0]
+    cloudPoints = cloudPoints[cloudPoints[:,2] > 0.0]
+    cloudPoints = cloudPoints[cloudPoints[:,0] < 0.8]
+    cloudPoints = cloudPoints[cloudPoints[:,0] > -0.8]
+    return cloudPoints
 
 
 def sendIntrinsics():
@@ -75,7 +78,7 @@ def sendRGB(command):
 
 
 def captureRealsense(capture):
-    global depth_image, color_image, captured
+    global color_frame, depth_frame, depth_image, color_image, captured
     try:
         align_to = rs.stream.color
         align = rs.align(align_to)
@@ -123,11 +126,6 @@ if __name__ == "__main__":
     device = pipeline_profile.get_device()
     device_product_line = str(device.get_info(rs.camera_info.product_line))
 
-    fx = 637.598
-    fy = 637.598
-    ppx = 646.101
-    ppy = 360.912
-    camera = CameraInfo(1280.0, 720.0, fx, fy, ppx, ppy, 1000)
 
     config.enable_stream(rs.stream.color, cam_width, cam_height, rs.format.bgr8, 30)
     config.enable_stream(rs.stream.depth, cam_width, cam_height, rs.format.z16, 30)
@@ -136,6 +134,7 @@ if __name__ == "__main__":
     align_to = rs.stream.color
     align = rs.align(align_to)
 
+    time.sleep(3)
     frames = pipeline.wait_for_frames()
     aligned_frames = align.process(frames)
 
@@ -157,6 +156,15 @@ if __name__ == "__main__":
     pubPointCloudGeometryStatic = rospy.Publisher("/sensors/realsense/pointcloudGeometry/static", PointCloud2, queue_size=1)
     pubStaticRGB = rospy.Publisher("/sensors/realsense/rgb/static", Image, queue_size=1)
     pubStaticDepth = rospy.Publisher("sensors/realsense/depth/static", Image, queue_size = 1)
+    pubPointCloudGeometryStaticRGB = rospy.Publisher('/sensors/camera/pointcloudGeometry/static/rgb', Float32MultiArray, queue_size=1)
+
+    intr = profile.get_stream(rs.stream.depth).as_video_stream_profile().get_intrinsics()
+
+    fx = intr.fx
+    fy = intr.fy
+    ppx = intr.ppx
+    ppy = intr.ppy
+    camera = CameraInfo(1280.0, 720.0, fx, fy, ppx, ppy, 1000)
 
     rate = rospy.Rate(1)
 
@@ -164,20 +172,45 @@ if __name__ == "__main__":
 
         # publish rgb static
         if captured:
+
             print("sending...")
             pubStaticRGB.publish(br.cv2_to_imgmsg(color_image))
-            pubStaticDepth.publish(br.cv2_to_imgmsg(depth_image))
+            #pubStaticDepth.publish(br.cv2_to_imgmsg(depth_image))
 
-            cloudStatic = create_point_cloud_from_depth_image(depth_image, camera, organized=True)
+            #cloudStatic = create_point_cloud_from_depth_image(depth_image, camera, organized=True)
+            cloudStatic = rs.pointcloud()
+            cloudStatic.map_to(color_frame);
+            points = rs.points()
+            points = cloudStatic.calculate(depth_frame)
+            cloudStatic = np.array(points.get_vertices())
+            uvCoords = np.array(points.get_texture_coordinates())
+
+            p = []
+            i = 0
+            for point in cloudStatic:
+                p.append([point[0], point[1], point[2]])
+
+            rgb = []
+            for c in uvCoords:
+                x = int(c[0]*cam_width)
+                y = int(c[1]*cam_height)
+                rgb.append([color_image[y][x][2], color_image[y][x][1], color_image[y][x][0]])
+
+            colors = np.array(rgb)/255.0
+            colors = colors.flatten()
+            msg = Float32MultiArray()
+            msg.data = colors
+            pubPointCloudGeometryStaticRGB.publish(msg)
+
+            points = np.array(p)
+
             header = Header()
             header.stamp = rospy.Time.now()
             header.frame_id = "ptu_camera_color_optical_frame"
 
             # Set "fields" and "cloud_data"
-            #points=np.asarray(cloudStatic.points)
-            #if not open3d_cloud.colors: # XYZ only
             fields=FIELDS_XYZ
-            cloud_data=cloudStatic
+            cloud_data=points
             pubPointCloudGeometryStatic.publish(pc2.create_cloud(header, fields, cloud_data))
 
         rate.sleep()

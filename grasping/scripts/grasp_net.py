@@ -17,7 +17,7 @@ from graspnetAPI import GraspGroup
 from realsense_service.srv import *
 from geometry_msgs.msg import PoseStamped
 from scipy.spatial.transform import Rotation
-from std_msgs.msg import Header
+from std_msgs.msg import Header, Float32MultiArray
 from sensor_msgs.msg import PointCloud2, PointField
 import sensor_msgs.point_cloud2 as pc2
 #from open3d_ros_helper import open3d_ros_helper as orh
@@ -45,7 +45,9 @@ parser.add_argument('--score', help="Score threshold", type=float, default=0.0)
 cfgs = parser.parse_args()
 
 def main():
-    global new_msg
+    global new_msg, cloud, rgb
+    cloud = None
+    rgb = None
 
     if not rospy.is_shutdown():
 
@@ -53,39 +55,47 @@ def main():
         rospy.init_node('graspnet', anonymous=True)
         pub = rospy.Publisher('grasps', Path, queue_size=10)
         rospy.Subscriber("start_graspnet", Bool, sub_callback)
+        cloudSubscriber = rospy.Subscriber("/sensors/realsense/pointcloudGeometry/static", PointCloud2, callbackPointCloud)
+        rgbSubscriber = rospy.Subscriber("/sensors/realsense/pointcloudGeometry/static/rgb", Float32MultiArray, callbackRGB)
         topic_name="kinect2/qhd/points"
+        rate = rospy.Rate(5)
 
 
         print('Loading network...')
         net = get_net()
+        new_msg = False
 
         while not rospy.is_shutdown():
 
-            new_msg = False
+
             print('Waiting for go...')
             while not new_msg and not rospy.is_shutdown():
                 rate.sleep()
 
             print('Processing data...')
-            end_points, cloud = get_and_process_data()
+            if cloud != None and rgb != None:
+                end_points = get_and_process_data(cloud, rgb)
 
-            print('Processing image through graspnet...')
-            gg = get_grasps(net, end_points)
-            if cfgs.collision_thresh > 0:
-                gg = collision_detection(gg, np.array(cloud.points))
-            gg.nms()
-            gg = remove_grasps_under_score(gg, cfgs.score) #  Score range between 0 and 2. Under 0.1 bad, over 0.7 good
+                print('Processing image through graspnet...')
+                gg = get_grasps(net, end_points)
+                if cfgs.collision_thresh > 0:
+                    gg = collision_detection(gg, np.array(cloud.points))
+                gg.nms()
+                gg = remove_grasps_under_score(gg, cfgs.score) #  Score range between 0 and 2. Under 0.1 bad, over 0.7 good
 
-            msg = generate_ros_message(gg, nr_of_grasps=0)  # nr_grasps = 0 is use all grasps
+                msg = generate_ros_message(gg, nr_of_grasps=0)  # nr_grasps = 0 is use all grasps
 
-            pub.publish(msg)
+                pub.publish(msg)
+                new_msg = False
+                cloud = None
+                rgb = None
 
-            #vis_grasps(gg, cloud, nr_to_visualize=0)  # nr_to_vizualize = 0 is show all
-            #grasps = gg[:nr_to_visualize]
-            #if nr_to_visualize == 0:
-            #    grasps = gg
-            #grippers = grasps.to_open3d_geometry_list()
-            #o3d.visualization.draw_geometries([cloud, *grippers])
+                #vis_grasps(gg, cloud, nr_to_visualize=0)  # nr_to_vizualize = 0 is show all
+                #grasps = gg[:nr_to_visualize]
+                #if nr_to_visualize == 0:
+                #    grasps = gg
+                #grippers = grasps.to_open3d_geometry_list()
+                #o3d.visualization.draw_geometries([cloud, *grippers])
 
 
 
@@ -157,51 +167,28 @@ def get_net():
     return net
 
 
-def get_and_process_data():
-
+def get_and_process_data(points, rgb):
     workspace_mask = np.array(Image.open(SCRIPT_DIR+'/workspace_mask.png'))
 
     print('Get data from realsense...')
-    captureRealsense()
-    color_img = np.array(getRGB()) / 255
-    depth_img = getDepth()
-    print('Generate pointcloud...')
-    # generate cloud
-    fx = 637.598
-    fy = 637.598
-    ppx = 646.101
-    ppy = 360.912
-    camera = CameraInfo(1280.0, 720.0, fx, fy, ppx, ppy, 1000)
-    cloud = create_point_cloud_from_depth_image(depth_img, camera, organized=True)
-
-    # get valid points
-    mask = (workspace_mask & (depth_img < 1000))
-    cloud_masked = cloud[mask]
-    color_masked = color_img[mask]
-
-    # sample points
-    if len(cloud_masked) >= cfgs.num_point:
-        idxs = np.random.choice(len(cloud_masked), cfgs.num_point, replace=False)
-    else:
-        idxs1 = np.arange(len(cloud_masked))
-        idxs2 = np.random.choice(len(cloud_masked), cfgs.num_point-len(cloud_masked), replace=True)
-        idxs = np.concatenate([idxs1, idxs2], axis=0)
-    cloud_sampled = cloud_masked[idxs]
-    color_sampled = color_masked[idxs]
+    #color_img = np.array(getRGB()) / 255
+    #depth_img = getDepth()
 
     # convert data
     cloud = o3d.geometry.PointCloud()
-    cloud.points = o3d.utility.Vector3dVector(cloud_masked.astype(np.float32))
-    cloud.colors = o3d.utility.Vector3dVector(color_masked.astype(np.float32))
+    cloud.points = o3d.utility.Vector3dVector(points.astype(np.float32))
+    cloud.colors = o3d.utility.Vector3dVector(rgb.astype(np.float32))
     end_points = dict()
-    cloud_sampled = torch.from_numpy(cloud_sampled[np.newaxis].astype(np.float32))
+    cloud_sampled = np.asarray(cloud.points)
+    color_sampled = np.asarray(cloud.colors)
+    #cloud_sampled = torch.from_numpy(cloud_sampled[np.newaxis].astype(np.float32))
+    cloud_sampled = torch.from_numpy(cloud_sampled.astype(np.float32))
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    #device = torch.device("cpu")
     cloud_sampled = cloud_sampled.to(device)
     end_points['point_clouds'] = cloud_sampled
     end_points['cloud_colors'] = color_sampled
 
-    return end_points, cloud
+    return end_points
 
 
 def get_grasps(net, end_points):
@@ -258,6 +245,35 @@ def getDepth():
     h = response.height.data
     depthImg = np.asarray(response.img.data).reshape((h, w)) # use this depth image
     return depthImg
+
+def callbackPointCloud(data):
+    global cloud
+    pcd = convertCloudFromRosToOpen3d(data)
+
+def callbackRGB(msg):
+    global rgb
+    rgb = np.asarray(msg.data)
+    rgb = np.reshape(rgb, (-1,3))
+
+def convertCloudFromRosToOpen3d(ros_cloud):
+
+    # Get cloud data from ros_cloud
+    field_names=[field.name for field in ros_cloud.fields]
+    cloud_data = list(pc2.read_points(ros_cloud, skip_nans=True, field_names = field_names))
+
+    # Check empty
+    open3d_cloud = o3d.geometry.PointCloud()
+    if len(cloud_data)==0:
+        print("Converting an empty cloud")
+        return None
+
+    xyz = [(x,y,z) for x,y,z in cloud_data ] # get xyz
+    xyz = np.array(xyz)
+    xyz = xyz[xyz[:,2] < 1.0]
+    open3d_cloud.points = o3d.utility.Vector3dVector(xyz)
+
+    # return
+    return open3d_cloud
 
 if __name__ == '__main__':
     main()
