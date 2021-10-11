@@ -32,7 +32,7 @@
     <arg name="rviz_config" value="$(find our_moveit_config)/launch/moveit.rviz"/>
   </include>
   <!--<remap from="right_scaled_vel_traj_controller/follow_joint_trajectory" to="/right_arm/right_scaled_vel_traj_controller/follow_joint_trajectory"/>-->
-  <node name="move_to_goal" pkg="moveit_scripts" type="move_to_goal.py"/>
+  <node name="move_to_goal" pkg="moveit_scripts" type="move_to_goal.py" output="screen"/>
 
 
   <!-- <node name="affordancenet" pkg="rob9" type="affordancenet.sh" required="false"/> -->

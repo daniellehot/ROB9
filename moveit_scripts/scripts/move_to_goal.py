@@ -13,14 +13,50 @@ from std_msgs.msg import Int8
 from math import pi
 import tf2_ros
 import tf2_geometry_msgs
+import tf_conversions
+import tf2_ros
+
 # from robotiq_3f_gripper_articulated_msgs.msg import Robotiq3FGripperRobotOutput
+
+def publish_grasp_frame(msg):
+    print("Publishing grasp frame")
+    t = geometry_msgs.msg.TransformStamped()
+    t.header.stamp = rospy.Time.now()
+    t.header.frame_id = msg.header.frame_id
+    t.child_frame_id = "grasp_to_reach"
+    t.transform.translation.x = msg.pose.position.x
+    t.transform.translation.y = msg.pose.position.y
+    t.transform.translation.z = msg.pose.position.z
+    t.transform.rotation.x = msg.pose.orientation.x
+    t.transform.rotation.y = msg.pose.orientation.y
+    t.transform.rotation.z = msg.pose.orientation.z
+    t.transform.rotation.w = msg.pose.orientation.w
+
+    br_grasp.sendTransform(t)
+
+def publish_goal_frame(msg):
+    print("Publishing goal frame")
+    t = geometry_msgs.msg.TransformStamped()
+    t.header.stamp = rospy.Time.now()
+    t.header.frame_id = msg.header.frame_id
+    t.child_frame_id = "goal_to_reach"
+    t.transform.translation.x = msg.pose.position.x
+    t.transform.translation.y = msg.pose.position.y
+    t.transform.translation.z = msg.pose.position.z
+    t.transform.rotation.x = msg.pose.orientation.x
+    t.transform.rotation.y = msg.pose.orientation.y
+    t.transform.rotation.z = msg.pose.orientation.z
+    t.transform.rotation.w = msg.pose.orientation.w
+
+    br_goal.sendTransform(t)
 
 def transform_frame(msg):
     transformed_pose_msg = geometry_msgs.msg.PoseStamped()
     trans = tf_buffer.lookup_transform('ptu_camera_color_optical_frame', 'world', rospy.Time.now(), rospy.Duration(1.0))
     transformed_pose_msg = tf_buffer.transform(msg, "world")
-    print(transformed_pose_msg)
+    #print(transformed_pose_msg)
     send_goal_ee_pos(transformed_pose_msg)
+    publish_goal_frame(transformed_pose_msg)
 
     """
     try:
@@ -31,11 +67,12 @@ def transform_frame(msg):
         pass
     """
 
+
 def move_to_ready():
     ready_pose_msg = geometry_msgs.msg.Pose()
-    ready_pose_msg.point.x = 0.4071
-    ready_pose_msg.point.y = 0.1361
-    ready_pose_msg.point.z = 1.6743
+    ready_pose_msg.position.x = 0.4071
+    ready_pose_msg.position.y = 0.1361
+    ready_pose_msg.position.z = 1.6743
     ready_pose_msg.orientation.x = -0.0575
     ready_pose_msg.orientation.y = 0.4495
     ready_pose_msg.orientation.z = 0.7546
@@ -47,12 +84,12 @@ def move_to_ready():
     move_group.stop()
     move_group.clear_pose_targets()
 
+
 def send_trajectory_to_rviz(plan):
     display_trajectory = moveit_msgs.msg.DisplayTrajectory()
-    display_trajectory.trajectory_start = robot.get_current_state()
+    display_trajectory.trajectory_start = move_group.get_current_state()
     display_trajectory.trajectory.append(plan)
     display_trajectory_publisher.publish(display_trajectory)
-
 
 
 def send_goal_ee_pos(msg):
@@ -64,21 +101,24 @@ def send_goal_ee_pos(msg):
     waypoint=[msg.pose]
     (plan, fraction) = move_group.compute_cartesian_path(waypoint, 0.01, 0.0)
     send_trajectory_to_rviz(plan)
-    rospy.sleep(10.)
+    #rospy.sleep(10.)
 
     move_group.execute(plan, wait=True)
     move_group.stop()
     move_group.clear_pose_targets()
-    rospy.sleep(10.)
+    #rospy.sleep(10.)
 
-    move_to_ready()
+    # move_to_ready()
     #gripper_pub.publish(close_gripper_msg)
     print("Done")
 
 
 def callback(msg):
-    print("Callback", msg)
+    print("Callback")
+    print(msg)
     transform_frame(msg)
+    publish_grasp_frame(msg)
+
 
 def reset_callback(msg):
     print("Reset callback")
@@ -108,6 +148,8 @@ if __name__ == '__main__':
 
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
+    br_grasp = tf2_ros.StaticTransformBroadcaster()
+    br_goal = tf2_ros.StaticTransformBroadcaster()
 
     reset_gripper_msg = std_msgs.msg.Int8()
     reset_gripper_msg.data = 0
