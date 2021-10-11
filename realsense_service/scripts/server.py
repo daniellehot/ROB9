@@ -78,7 +78,7 @@ def sendRGB(command):
 
 
 def captureRealsense(capture):
-    global depth_image, color_image, captured
+    global color_frame, depth_frame, depth_image, color_image, captured
     try:
         align_to = rs.stream.color
         align = rs.align(align_to)
@@ -197,8 +197,8 @@ if __name__ == "__main__":
             # Set "fields" and "cloud_data"
             fields=FIELDS_XYZ
             cloud_data=cloudStatic
-            print("x: ", np.min(cloud_data[:,0]), np.max(cloud_data[:,0]), np.max(cloud_data[:,0]) - np.min(cloud_data[:,0]))
-            print("y: ", np.min(cloud_data[:,1]), np.max(cloud_data[:,1]), np.max(cloud_data[:,1]) - np.min(cloud_data[:,1]))
+            #print("x: ", np.min(cloud_data[:,0]), np.max(cloud_data[:,0]), np.max(cloud_data[:,0]) - np.min(cloud_data[:,0]))
+            #print("y: ", np.min(cloud_data[:,1]), np.max(cloud_data[:,1]), np.max(cloud_data[:,1]) - np.min(cloud_data[:,1]))
             pubPointCloudGeometryStatic.publish(pc2.create_cloud(header, fields, cloud_data))
 
         rate.sleep()
