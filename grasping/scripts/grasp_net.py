@@ -54,6 +54,7 @@ def main():
         pub = rospy.Publisher('grasps', Path, queue_size=10)
         rospy.Subscriber("start_graspnet", Bool, sub_callback)
         topic_name="kinect2/qhd/points"
+        rate = rospy.Rate(5)
 
 
         print('Loading network...')
