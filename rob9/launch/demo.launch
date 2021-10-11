@@ -4,7 +4,14 @@
 
   <node name="robotiq_robot_controller" pkg="robotiq_3f_gripper_control" type="Robotiq3FGripperTcpNode.py" args="192.168.1.140"/>
   <node name="gripper_controller" pkg="moveit_scripts" type="gripper_controller.py"/>
-  -<node pkg="tf2_ros" type="static_transform_publisher" name="link1_broadcaster" args="0.0 0.13 -0.11 0.369 -0.603 0.369 0.603 ptu_pan ptu_tilt_real" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="ptu_real_frame_broadcaster" args="-0.034 -0.199 1.845 0.972 0.0 0.0 -0.233 world ptu_camera_color_optical_frame" />
+
+  <!--<node pkg="tf" type="tf_remap" name="tf_remapper" output="screen">
+    <rosparam param="mappings">
+      [{old: ptu_camera_color_optical_frame, new: ptu_camera_color_optical_frame_real}]
+    </rosparam>
+  </node>-->
+
   <!-- <node name="start_ptu" pkg="ptu" type="start_ptu.py" required="true"/> -->
   <!-- <node name="realsense_service" pkg="realsense_service" type="server.py" required="false" output="screen"/> -->
 

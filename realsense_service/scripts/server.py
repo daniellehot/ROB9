@@ -11,7 +11,6 @@ import sensor_msgs.point_cloud2 as pc2
 import rospy
 import pyrealsense2 as rs
 import numpy as np
-import open3d as o3d
 from cv_bridge import CvBridge
 
 class CameraInfo():
