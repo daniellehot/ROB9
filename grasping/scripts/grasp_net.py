@@ -17,7 +17,7 @@ from graspnetAPI import GraspGroup
 from realsense_service.srv import *
 from geometry_msgs.msg import PoseStamped
 from scipy.spatial.transform import Rotation
-from std_msgs.msg import Header
+from std_msgs.msg import Header, Float32MultiArray
 from sensor_msgs.msg import PointCloud2, PointField
 import sensor_msgs.point_cloud2 as pc2
 #from open3d_ros_helper import open3d_ros_helper as orh
@@ -45,8 +45,9 @@ parser.add_argument('--score', help="Score threshold", type=float, default=0.0)
 cfgs = parser.parse_args()
 
 def main():
-    global new_msg
+    global new_msg, cloud, rgb
     cloud = None
+    rgb = None
 
     if not rospy.is_shutdown():
 
@@ -54,24 +55,26 @@ def main():
         rospy.init_node('graspnet', anonymous=True)
         pub = rospy.Publisher('grasps', Path, queue_size=10)
         rospy.Subscriber("start_graspnet", Bool, sub_callback)
-        cloudSubscriber = rospy.Subscriber("/sensors/realsense/pointcloudGeometry/static", PointCloud2, callback)
+        cloudSubscriber = rospy.Subscriber("/sensors/realsense/pointcloudGeometry/static", PointCloud2, callbackPointCloud)
+        rgbSubscriber = rospy.Subscriber("/sensors/realsense/pointcloudGeometry/static/rgb", Float32MultiArray, callbackRGB)
         topic_name="kinect2/qhd/points"
         rate = rospy.Rate(5)
 
 
         print('Loading network...')
         net = get_net()
+        new_msg = False
 
         while not rospy.is_shutdown():
 
-            new_msg = False
+
             print('Waiting for go...')
             while not new_msg and not rospy.is_shutdown():
                 rate.sleep()
 
             print('Processing data...')
-            if cloud != None:
-                end_points = get_and_process_data()
+            if cloud != None and rgb != None:
+                end_points = get_and_process_data(cloud, rgb)
 
                 print('Processing image through graspnet...')
                 gg = get_grasps(net, end_points)
@@ -83,6 +86,9 @@ def main():
                 msg = generate_ros_message(gg, nr_of_grasps=0)  # nr_grasps = 0 is use all grasps
 
                 pub.publish(msg)
+                new_msg = False
+                cloud = None
+                rgb = None
 
                 #vis_grasps(gg, cloud, nr_to_visualize=0)  # nr_to_vizualize = 0 is show all
                 #grasps = gg[:nr_to_visualize]
@@ -161,26 +167,26 @@ def get_net():
     return net
 
 
-def get_and_process_data(cloud):
-
+def get_and_process_data(points, rgb):
     workspace_mask = np.array(Image.open(SCRIPT_DIR+'/workspace_mask.png'))
 
     print('Get data from realsense...')
-    color_img = np.array(getRGB()) / 255
-    depth_img = getDepth()
+    #color_img = np.array(getRGB()) / 255
+    #depth_img = getDepth()
 
     # convert data
     cloud = o3d.geometry.PointCloud()
-    cloud.points = o3d.utility.Vector3dVector(cloud_masked.astype(np.float32))
-    cloud.colors = o3d.utility.Vector3dVector(color_masked.astype(np.float32))
+    cloud.points = o3d.utility.Vector3dVector(points.astype(np.float32))
+    cloud.colors = o3d.utility.Vector3dVector(rgb.astype(np.float32))
     end_points = dict()
     cloud_sampled = np.asarray(cloud.points)
+    color_sampled = np.asarray(cloud.colors)
     #cloud_sampled = torch.from_numpy(cloud_sampled[np.newaxis].astype(np.float32))
     cloud_sampled = torch.from_numpy(cloud_sampled.astype(np.float32))
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     cloud_sampled = cloud_sampled.to(device)
     end_points['point_clouds'] = cloud_sampled
-    #end_points['cloud_colors'] = color_sampled
+    end_points['cloud_colors'] = color_sampled
 
     return end_points
 
@@ -243,6 +249,11 @@ def getDepth():
 def callbackPointCloud(data):
     global cloud
     pcd = convertCloudFromRosToOpen3d(data)
+
+def callbackRGB(msg):
+    global rgb
+    rgb = np.asarray(msg.data)
+    rgb = np.reshape(rgb, (-1,3))
 
 def convertCloudFromRosToOpen3d(ros_cloud):
 
