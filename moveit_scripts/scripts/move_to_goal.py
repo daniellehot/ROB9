@@ -106,9 +106,9 @@ def send_goal_ee_pos(msg):
     move_group.execute(plan, wait=True)
     move_group.stop()
     move_group.clear_pose_targets()
-    #rospy.sleep(10.)
+    rospy.sleep(10.)
 
-    # move_to_ready()
+    move_to_ready()
     #gripper_pub.publish(close_gripper_msg)
     print("Done")
 
