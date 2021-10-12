@@ -12,9 +12,13 @@ import numpy as np
 import cv2
 from std_msgs.msg import Bool
 from nav_msgs.msg import Path
+import geometry_msgs.msg
 from geometry_msgs.msg import PoseStamped
-
-capture_new_scene = True
+from geometry_msgs.msg import Pose
+import tf2_ros
+import tf2_geometry_msgs
+import tf_conversions
+import tf2_ros
 
 def captureNewScene():
     rospy.wait_for_service("/sensors/realsense/capture")
@@ -61,21 +65,29 @@ def run_graspnet(pub):
     graspnet_msg = Bool()
     graspnet_msg.data = True
     pub.publish(graspnet_msg)
-    rospy.sleep(1)
-    pub.publish(graspnet_msg)
+
+def transformFrame(tf_buffer, pose, orignalFrame, newFrame):
+
+    transformed_pose_msg = geometry_msgs.msg.PoseStamped()
+    tf_buffer.lookup_transform(orignalFrame, newFrame, rospy.Time.now(), rospy.Duration(1.0))
+    transformed_pose_msg = tf_buffer.transform(pose, newFrame)
+    return transformed_pose_msg
+
 
 def main():
     global new_grasps, grasp_data
     if not rospy.is_shutdown():
         rospy.init_node('grasp_pose', anonymous=True)
+        tf_buffer = tf2_ros.Buffer()
+        tf_listener = tf2_ros.TransformListener(tf_buffer)
+
         rospy.Subscriber("grasps", Path, grasp_callback)
         pub_graspnet = rospy.Publisher('start_graspnet', Bool, queue_size=10)
         pub_grasp = rospy.Publisher('pose_to_reach', PoseStamped, queue_size=10)
         rate = rospy.Rate(5)
 
         # only capture a new scene at startup
-        #if capture_new_scene:
-        #    captureNewScene()
+        captureNewScene()
 
         #make graspnet run on images from realsense
         run_graspnet(pub_graspnet)
@@ -85,11 +97,23 @@ def main():
         while not new_grasps and not rospy.is_shutdown():
             rate.sleep()
 
+        # Evaluating the best grasp.
+        world_frame = "world"
+        camera_frame = "ptu_camera_color_optical_frame"
         print('Sending grasp to moveIT...')
         grasp_msg = grasp_data.poses[0]
+        score = grasp_msg.header.frame_id
+        print(grasp_msg)
+
         grasp_msg.header.stamp = rospy.Time.now()
-        grasp_msg.header.frame_id = 'ptu_camera_color_optical_frame'
-        pub_grasp.publish(grasp_msg)
+        grasp_msg.header.frame_id = camera_frame
+
+        transformFrame(tf_buffer, grasp_msg, camera_frame, world_frame)
+        exit()
+        #"right_ee_link"
+
+        ############################## START HERE DANIEL #######################
+        #pub_grasp.publish(grasp_msg)
 
 
         # takes a long time to run
