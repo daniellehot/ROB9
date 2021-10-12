@@ -18,45 +18,12 @@ import tf2_ros
 
 # from robotiq_3f_gripper_articulated_msgs.msg import Robotiq3FGripperRobotOutput
 
-def publish_grasp_frame(msg):
-    print("Publishing grasp frame")
-    t = geometry_msgs.msg.TransformStamped()
-    t.header.stamp = rospy.Time.now()
-    t.header.frame_id = msg.header.frame_id
-    t.child_frame_id = "grasp_to_reach"
-    t.transform.translation.x = msg.pose.position.x
-    t.transform.translation.y = msg.pose.position.y
-    t.transform.translation.z = msg.pose.position.z
-    t.transform.rotation.x = msg.pose.orientation.x
-    t.transform.rotation.y = msg.pose.orientation.y
-    t.transform.rotation.z = msg.pose.orientation.z
-    t.transform.rotation.w = msg.pose.orientation.w
-
-    br_grasp.sendTransform(t)
-
-def publish_goal_frame(msg):
-    print("Publishing goal frame")
-    t = geometry_msgs.msg.TransformStamped()
-    t.header.stamp = rospy.Time.now()
-    t.header.frame_id = msg.header.frame_id
-    t.child_frame_id = "goal_to_reach"
-    t.transform.translation.x = msg.pose.position.x
-    t.transform.translation.y = msg.pose.position.y
-    t.transform.translation.z = msg.pose.position.z
-    t.transform.rotation.x = msg.pose.orientation.x
-    t.transform.rotation.y = msg.pose.orientation.y
-    t.transform.rotation.z = msg.pose.orientation.z
-    t.transform.rotation.w = msg.pose.orientation.w
-
-    br_goal.sendTransform(t)
-
 def transform_frame(msg):
     transformed_pose_msg = geometry_msgs.msg.PoseStamped()
     trans = tf_buffer.lookup_transform('ptu_camera_color_optical_frame', 'world', rospy.Time.now(), rospy.Duration(1.0))
     transformed_pose_msg = tf_buffer.transform(msg, "world")
     #print(transformed_pose_msg)
     send_goal_ee_pos(transformed_pose_msg)
-    publish_goal_frame(transformed_pose_msg)
 
     """
     try:
@@ -117,8 +84,6 @@ def callback(msg):
     print("Callback")
     print(msg)
     transform_frame(msg)
-    publish_grasp_frame(msg)
-
 
 def reset_callback(msg):
     print("Reset callback")
@@ -142,14 +107,14 @@ if __name__ == '__main__':
 
     moveit_commander.roscpp_initialize(sys.argv)
     move_group = moveit_commander.MoveGroupCommander("manipulator")
+    move_group = set_max_acceleration_scaling_factor(0.1)
+    print(value)
     display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
                                                    moveit_msgs.msg.DisplayTrajectory,
                                                    queue_size=20)
 
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
-    br_grasp = tf2_ros.StaticTransformBroadcaster()
-    br_goal = tf2_ros.StaticTransformBroadcaster()
 
     reset_gripper_msg = std_msgs.msg.Int8()
     reset_gripper_msg.data = 0
