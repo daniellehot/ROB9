@@ -73,7 +73,10 @@ def main():
                 rate.sleep()
 
             print('Processing data...')
-            if cloud != None and rgb != None:
+            rate.sleep()
+            if cloud is None or rgb is None:
+                pass
+            else:
                 end_points = get_and_process_data(cloud, rgb)
 
                 print('Processing image through graspnet...')
@@ -167,7 +170,7 @@ def get_net():
     return net
 
 
-def get_and_process_data(points, rgb):
+def get_and_process_data(cloud, rgb):
     workspace_mask = np.array(Image.open(SCRIPT_DIR+'/workspace_mask.png'))
 
     print('Get data from realsense...')
@@ -175,8 +178,8 @@ def get_and_process_data(points, rgb):
     #depth_img = getDepth()
 
     # convert data
-    cloud = o3d.geometry.PointCloud()
-    cloud.points = o3d.utility.Vector3dVector(points.astype(np.float32))
+    #cloud = o3d.geometry.PointCloud()
+    #cloud.points = o3d.utility.Vector3dVector(points.astype(np.float32))
     cloud.colors = o3d.utility.Vector3dVector(rgb.astype(np.float32))
     end_points = dict()
     cloud_sampled = np.asarray(cloud.points)
@@ -248,12 +251,14 @@ def getDepth():
 
 def callbackPointCloud(data):
     global cloud
-    pcd = convertCloudFromRosToOpen3d(data)
+    cloud = convertCloudFromRosToOpen3d(data)
+    print("Got geometry")
 
 def callbackRGB(msg):
     global rgb
     rgb = np.asarray(msg.data)
     rgb = np.reshape(rgb, (-1,3))
+    print("Got rgb")
 
 def convertCloudFromRosToOpen3d(ros_cloud):
 
