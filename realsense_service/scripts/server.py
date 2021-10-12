@@ -116,11 +116,25 @@ def generatePointcloud(depth_frame, color_frame, color_image):
     points = rs.points()
     points = cloud.calculate(depth_frame)
     cloud = np.array(np.array(points.get_vertices()).tolist())
-    
-    colors = np.array(np.array(points.get_texture_coordinates()).tolist())
-    colors[:,0] = colors[:,0] *cam_width
-    colors[:,1] = colors[:,1] *cam_height
-    colors = np.array(colors)/255.0
+
+    uv = np.array(np.array(points.get_texture_coordinates()).tolist())
+    uv[:,0] = uv[:,0] *cam_width
+    uv[:,1] = uv[:,1] *cam_height
+    uv[:, [1, 0]] = uv[:, [0, 1]]
+    uv = np.rint(np.array(uv)).astype(int)
+
+    idx = cloud[:,2] < 1.0
+    cloud = cloud[idx]
+    uv = uv[idx]
+    idxs = np.random.choice(cloud.shape[0], 20000, replace=False)
+    cloud = cloud[idxs]
+    uv = uv[idxs]
+
+    colors = []
+    for idx in uv:
+        colors.append(color_image[idx[0], idx[1]])
+    colors = np.array(colors)
+
     colors = colors.flatten()
 
     cloudGeometryStatic = cloud
@@ -188,7 +202,7 @@ if __name__ == "__main__":
     ppy = intr.ppy
     camera = CameraInfo(1280.0, 720.0, fx, fy, ppx, ppy, 1000)
 
-    rate = rospy.Rate(1)
+    rate = rospy.Rate(6)
 
     while not rospy.is_shutdown():
 
