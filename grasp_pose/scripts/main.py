@@ -73,6 +73,14 @@ def transformFrame(tf_buffer, pose, orignalFrame, newFrame):
     transformed_pose_msg = tf_buffer.transform(pose, newFrame)
     return transformed_pose_msg
 
+def add_waypoint(msg):
+    waypoint_msg = transformFrame(tf_buffer, msg, msg.header.frame_id, "right_ee_link")
+    waypoint_msg.pose.position.x -= 0.2
+    waypoint_msg.header.frame_id = "right_ee_link"
+    waypoint_msg.header.stamp = rospy.Time.now()
+    pub_grasp.publish(waypoint_msg)
+
+
 
 def main():
     global new_grasps, grasp_data
@@ -102,6 +110,7 @@ def main():
         camera_frame = "ptu_camera_color_optical_frame"
         print('Sending grasp to moveIT...')
         grasp_msg = grasp_data.poses[0]
+        add_waypoint()
         score = grasp_msg.header.frame_id
         print(grasp_msg)
 
@@ -113,12 +122,7 @@ def main():
         #"right_ee_link"
 
         ############################## START HERE DANIEL #######################
-        #pub_grasp.publish(grasp_msg)
-
-
-        # takes a long time to run
-        # make sure affordance-ros docker image is running
-        #getAffordanceResult()
+        add_waypoint(grasp_msg)
 
 if __name__ == "__main__":
     main()

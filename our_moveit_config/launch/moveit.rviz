@@ -5,8 +5,9 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /MotionPlanning1
-        - /TF1
         - /TF1/Frames1
+        - /PointCloud21
+        - /PointCloud21/Status1
       Splitter Ratio: 0.7425600290298462
     Tree Height: 369
   - Class: rviz/Help
@@ -704,9 +705,10 @@ Visualization Manager:
         world:
           goal_to_reach:
             {}
+          grasp_to_reach:
+            {}
           ptu_camera_color_optical_frame_real:
-            grasp_to_reach:
-              {}
+            {}
           table:
             ptu_base:
               ptu_pan:
@@ -816,7 +818,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 3.5987558364868164
+      Distance: 3.6414575576782227
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -831,10 +833,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.3247968852519989
+      Pitch: 0.6547957062721252
       Target Frame: world
       Value: XYOrbit (rviz)
-      Yaw: 3.0367648601531982
+      Yaw: 3.2617721557617188
     Saved: ~
 Window Geometry:
   Displays:

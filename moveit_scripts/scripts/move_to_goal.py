@@ -66,7 +66,9 @@ def send_goal_ee_pos(msg):
     #plan = move_group.go(wait=True)
 
     waypoint=[msg.pose]
-    (plan, fraction) = move_group.compute_cartesian_path(waypoint, 0.01, 0.0)
+    (plan, fraction) = move_group.compute_cartesian_path(waypoint, 0.01, 1.0)
+    print("Fraction")
+    print(fraction)
     send_trajectory_to_rviz(plan)
     #rospy.sleep(10.)
 
@@ -75,7 +77,7 @@ def send_goal_ee_pos(msg):
     move_group.clear_pose_targets()
     rospy.sleep(10.)
 
-    move_to_ready()
+    #move_to_ready()
     #gripper_pub.publish(close_gripper_msg)
     print("Done")
 
@@ -96,7 +98,7 @@ def reset_callback(msg):
         #gripper_pub.publish(activate_gripper_msg)
         #gripper_pub.publish(pinch_gripper_msg)
     else:
-        print("Not a valid input")
+        print("Invalid input")
 
 
 if __name__ == '__main__':
@@ -107,8 +109,7 @@ if __name__ == '__main__':
 
     moveit_commander.roscpp_initialize(sys.argv)
     move_group = moveit_commander.MoveGroupCommander("manipulator")
-    move_group = set_max_acceleration_scaling_factor(0.1)
-    print(value)
+    move_group.set_max_acceleration_scaling_factor(0.1)
     display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
                                                    moveit_msgs.msg.DisplayTrajectory,
                                                    queue_size=20)
