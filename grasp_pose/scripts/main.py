@@ -111,11 +111,17 @@ def main(demo):
         # Evaluating the best grasp.
         ee_frame = "right_ee_link"
         world_frame = "world"
+<<<<<<< HEAD
         if demo == True:
             camera_frame = "ptu_camera_color_optical_frame_real"
         else:
             camera_frame = "ptu_camera_color_optical_frame"
 
+=======
+        camera_frame = "ptu_camera_color_optical_frame"
+        camera_frame2 = "ptu_camera_color_optical_frame_real"
+        ee_frame = "right_ee_link"
+>>>>>>> main
 
         i, grasp_msg = 0, 0
         while True:
