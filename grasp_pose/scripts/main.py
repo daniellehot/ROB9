@@ -143,6 +143,12 @@ def main():
             wSphere = copy.deepcopy(wPoseOrigin)
             wSphere = transformFrame(tf_buffer, wSphere, camera_frame, world_frame)
             wGrasp = transformFrame(tf_buffer, grasp, camera_frame, world_frame)
+            print(offset)
+            print()
+            print(wSphere.pose.position)
+            print()
+            print(wGrasp.pose.position)
+            #exit()
             wSphere.pose.position.x += -wGrasp.pose.position.y
             wSphere.pose.position.y += -wGrasp.pose.position.y
             wSphere.pose.position.z += -wGrasp.pose.position.z
@@ -156,12 +162,12 @@ def main():
             print(r, polarAngle, azimuthAngle)
             azimuthAngleLimit = [-0.75*math.pi, -0.25*math.pi]
             polarAngleLimit = [0, 0.5*math.pi]
-            """
+
             grasp_msg = grasp_data.poses[i]
             grasp_msg.header.stamp = rospy.Time.now()
             grasp_msg.header.frame_id = camera_frame
             pub_grasp.publish(grasp_msg)
-            """
+
             wPoseOrigin.header.stamp = rospy.Time.now()
             wPoseOrigin.header.frame_id = wPoseOrigin.header.frame_id
             pub_waypoint.publish(wPoseOrigin)
