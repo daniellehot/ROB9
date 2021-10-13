@@ -182,11 +182,7 @@ def main():
         #"right_ee_link"
 
         ############################## START HERE DANIEL #######################
-
-
-        # takes a long time to run
-        # make sure affordance-ros docker image is running
-        #getAffordanceResult()
+        add_waypoint(grasp_msg)
 
 if __name__ == "__main__":
     main()
