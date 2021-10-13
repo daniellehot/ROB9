@@ -1,8 +1,4 @@
-#!/usr/bin/env python3
-
-"""
-Import sys modular, sys.argv The function of is to pass parameters from the outside to the inside of the program. sys.argv(number)，number=0 Is the name of the script
-"""
+#!/usr/bin/env python
 import sys
 import rospy
 import std_msgs.msg
@@ -19,6 +15,9 @@ import tf2_ros
 import tf2_geometry_msgs
 import tf_conversions
 import tf2_ros
+from tf.transformations import euler_from_quaternion, quaternion_from_euler, quaternion_matrix
+import copy
+import math
 
 def captureNewScene():
     rospy.wait_for_service("/sensors/realsense/capture")
@@ -73,16 +72,19 @@ def transformFrame(tf_buffer, pose, orignalFrame, newFrame):
     transformed_pose_msg = tf_buffer.transform(pose, newFrame)
     return transformed_pose_msg
 
-def add_waypoint(msg):
-    waypoint_msg = transformFrame(tf_buffer, msg, msg.header.frame_id, "right_ee_link")
-    waypoint_msg.pose.position.x -= 0.2
-    waypoint_msg.header.frame_id = "right_ee_link"
-    waypoint_msg.header.stamp = rospy.Time.now()
-    pub_grasp.publish(waypoint_msg)
+def cartessianToPolar(x, y, z):
+
+    print("cart: ", round(x,2), round(y,2), round(z,2))
+    polar = math.atan2(math.sqrt(x**2 + y**2), z)
+    azimuth = math.atan2(y, x)
+    if x <= 0:
+        azimuth += math.pi
+    r = math.sqrt(x**2 + y**2 + z**2)
+
+    return r, polar, azimuth
 
 
-
-def main():
+def main(demo):
     global new_grasps, grasp_data
     if not rospy.is_shutdown():
         rospy.init_node('grasp_pose', anonymous=True)
@@ -92,6 +94,7 @@ def main():
         rospy.Subscriber("grasps", Path, grasp_callback)
         pub_graspnet = rospy.Publisher('start_graspnet', Bool, queue_size=10)
         pub_grasp = rospy.Publisher('pose_to_reach', PoseStamped, queue_size=10)
+        pub_waypoint = rospy.Publisher('pose_to_reach_waypoint', PoseStamped, queue_size=10)
         rate = rospy.Rate(5)
 
         # only capture a new scene at startup
@@ -106,18 +109,78 @@ def main():
             rate.sleep()
 
         # Evaluating the best grasp.
+        ee_frame = "right_ee_link"
         world_frame = "world"
-        camera_frame = "ptu_camera_color_optical_frame"
-        print('Sending grasp to moveIT...')
-        grasp_msg = grasp_data.poses[0]
-        add_waypoint()
-        score = grasp_msg.header.frame_id
-        print(grasp_msg)
+        if demo == True:
+            camera_frame = "ptu_camera_color_optical_frame_real"
+        else:
+            camera_frame = "ptu_camera_color_optical_frame"
 
-        grasp_msg.header.stamp = rospy.Time.now()
-        grasp_msg.header.frame_id = camera_frame
 
-        transformFrame(tf_buffer, grasp_msg, camera_frame, world_frame)
+        i, grasp_msg = 0, 0
+        while True:
+
+            grasp = grasp_data.poses[i]
+            grasp.header.frame_id = camera_frame
+            if i > len(grasp_data.poses):
+                break
+
+            if i >= 1:
+                break
+
+            wPoseOrigin = copy.deepcopy(grasp)
+            quaternion = (
+                wPoseOrigin.pose.orientation.x,
+                wPoseOrigin.pose.orientation.y,
+                wPoseOrigin.pose.orientation.z,
+                wPoseOrigin.pose.orientation.w)
+            rotMat = quaternion_matrix(quaternion)[:3,:3]
+            offset = np.array([[0.0], [0.0], [0.2]])
+            offset = np.transpose(np.matmul(rotMat, offset))[0]
+
+            wPoseOriginPos = np.array([wPoseOrigin.pose.position.x, wPoseOrigin.pose.position.y, wPoseOrigin.pose.position.z])
+            wPoseOrigin.pose.position.x += -offset[0]
+            wPoseOrigin.pose.position.y += -offset[1]
+            wPoseOrigin.pose.position.z += -offset[2]
+
+            wSphere = copy.deepcopy(wPoseOrigin)
+            wSphere = transformFrame(tf_buffer, wSphere, camera_frame, world_frame)
+            wGrasp = transformFrame(tf_buffer, grasp, camera_frame, world_frame)
+            wSphere.pose.position.x += -wGrasp.pose.position.y
+            wSphere.pose.position.y += -wGrasp.pose.position.y
+            wSphere.pose.position.z += -wGrasp.pose.position.z
+            x = wSphere.pose.position.x
+            y = wSphere.pose.position.y
+            z = wSphere.pose.position.z
+            print(x,y,z)
+
+            r, polarAngle, azimuthAngle = cartessianToPolar(x, y, z)
+
+            print(r, polarAngle, azimuthAngle)
+            azimuthAngleLimit = [-0.75*math.pi, -0.25*math.pi]
+            polarAngleLimit = [0, 0.5*math.pi]
+            """
+            grasp_msg = grasp_data.poses[i]
+            grasp_msg.header.stamp = rospy.Time.now()
+            grasp_msg.header.frame_id = camera_frame
+            pub_grasp.publish(grasp_msg)
+            """
+            wPoseOrigin.header.stamp = rospy.Time.now()
+            wPoseOrigin.header.frame_id = wPoseOrigin.header.frame_id
+            pub_waypoint.publish(wPoseOrigin)
+            """
+            if polarAngle >= polarAngleLimit[0] and polarAngle <= polarAngleLimit[1]:
+                if azimuthAngle >= azimuthAngleLimit[0] and azimuthAngle <= azimuthAngleLimit[1]:
+                    grasp_msg = grasp_data.poses[i]
+                    grasp_msg.header.stamp = rospy.Time.now()
+                    grasp_msg.header.frame_id = camera_frame
+                    break
+            """
+            i += 1
+
+        if grasp_msg == 0:
+            print("Could not find grasp with appropriate angle")
+        #pub_grasp.publish(grasp_msg)
         exit()
         #"right_ee_link"
 
@@ -125,4 +188,10 @@ def main():
         add_waypoint(grasp_msg)
 
 if __name__ == "__main__":
-    main()
+    demo = False
+    if len(sys.argv) > 1:
+        if sys.argv[1] == 'demo':
+            demo = True
+        else:
+            print("Invalid input argument")
+    main(demo)

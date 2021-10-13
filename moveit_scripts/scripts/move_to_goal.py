@@ -20,7 +20,7 @@ import tf2_ros
 
 def transform_frame(msg):
     transformed_pose_msg = geometry_msgs.msg.PoseStamped()
-    trans = tf_buffer.lookup_transform('ptu_camera_color_optical_frame', 'world', rospy.Time.now(), rospy.Duration(1.0))
+    trans = tf_buffer.lookup_transform(msg.header.frame_id, 'world', rospy.Time.now(), rospy.Duration(1.0))
     transformed_pose_msg = tf_buffer.transform(msg, "world")
     #print(transformed_pose_msg)
     send_goal_ee_pos(transformed_pose_msg)
@@ -85,6 +85,7 @@ def send_goal_ee_pos(msg):
 def callback(msg):
     print("Callback")
     print(msg)
+    msg.header.frame_id = "ptu_camera_color_optical_frame_real"
     transform_frame(msg)
 
 def reset_callback(msg):
