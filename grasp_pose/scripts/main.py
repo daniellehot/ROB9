@@ -181,10 +181,6 @@ def main(demo):
             print("Could not find grasp with appropriate angle")
         #pub_grasp.publish(grasp_msg)
         exit()
-        #"right_ee_link"
-
-        ############################## START HERE DANIEL #######################
-        add_waypoint(grasp_msg)
 
 if __name__ == "__main__":
     demo = False
