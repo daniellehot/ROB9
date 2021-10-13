@@ -84,7 +84,7 @@ def cartessianToPolar(x, y, z):
     return r, polar, azimuth
 
 
-def main():
+def main(demo):
     global new_grasps, grasp_data
     if not rospy.is_shutdown():
         rospy.init_node('grasp_pose', anonymous=True)
@@ -109,10 +109,12 @@ def main():
             rate.sleep()
 
         # Evaluating the best grasp.
-        world_frame = "world"
-        camera_frame = "ptu_camera_color_optical_frame"
-        camera_frame2 = "ptu_camera_color_optical_frame_real"
         ee_frame = "right_ee_link"
+        world_frame = "world"
+        if demo == True:
+            camera_frame = "ptu_camera_color_optical_frame_real"
+        else:
+            camera_frame = "ptu_camera_color_optical_frame"
 
         i, grasp_msg = 0, 0
         while True:
@@ -185,10 +187,12 @@ def main():
             print("Could not find grasp with appropriate angle")
         #pub_grasp.publish(grasp_msg)
         exit()
-        #"right_ee_link"
-
-        ############################## START HERE DANIEL #######################
-        add_waypoint(grasp_msg)
 
 if __name__ == "__main__":
-    main()
+    demo = False
+    if len(sys.argv) > 1:
+        if sys.argv[1] == 'demo':
+            demo = True
+        else:
+            print("Invalid input argument")
+    main(demo)

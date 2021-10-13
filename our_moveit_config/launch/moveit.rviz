@@ -3,11 +3,7 @@ Panels:
     Help Height: 84
     Name: Displays
     Property Tree Widget:
-      Expanded:
-        - /MotionPlanning1
-        - /TF1/Frames1
-        - /PointCloud21
-        - /PointCloud21/Status1
+      Expanded: ~
       Splitter Ratio: 0.7425600290298462
     Tree Height: 369
   - Class: rviz/Help
@@ -705,10 +701,9 @@ Visualization Manager:
         world:
           goal_to_reach:
             {}
-          grasp_to_reach:
-            {}
           ptu_camera_color_optical_frame_real:
-            {}
+            grasp_to_reach:
+              {}
           table:
             ptu_base:
               ptu_pan:
@@ -786,7 +781,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -801,7 +796,35 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: false
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Min Color: 0; 0; 0
+      Name: PointCloud2_demo
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.0010000000474974513
+      Style: Flat Squares
+      Topic: /sensors/realsense/pointcloudGeometry/static_corrected
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -818,7 +841,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 3.6414575576782227
+      Distance: 3.678229808807373
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -833,10 +856,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6547957062721252
+      Pitch: 0.35979610681533813
       Target Frame: world
       Value: XYOrbit (rviz)
-      Yaw: 3.2617721557617188
+      Yaw: 4.113560676574707
     Saved: ~
 Window Geometry:
   Displays:
