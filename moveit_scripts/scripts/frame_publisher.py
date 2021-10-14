@@ -7,7 +7,7 @@ from moveit_commander.conversions import pose_to_list
 import moveit_msgs.msg
 import geometry_msgs
 from geometry_msgs.msg import Pose, PoseStamped
-from sensor_msgs.msg import PointCloud2
+#from sensor_msgs.msg import PointCloud2
 from std_msgs.msg import Int8
 from math import pi
 import tf2_ros
@@ -79,39 +79,21 @@ def publish_waypoint_frame(msg):
     t.transform.rotation.y = transformed_msg.pose.orientation.y
     t.transform.rotation.z = transformed_msg.pose.orientation.z
     t.transform.rotation.w = transformed_msg.pose.orientation.w
-    print(t)
+    #print(t)
     br_waypoint.sendTransform(t)
 
 
 def callback(msg):
-    # if demo == True and msg.header.frame_id == "ptu_camera_color_optical_frame" :
-        # msg.header.frame_id = "ptu_camera_color_optical_frame_real"
     publish_grasp_frame(msg)
     publish_goal_frame(msg)
 
 
 def waypoint_callback(msg):
-    print("waypoint callback")
-    print(msg)
-    # if demo == True and msg.header.frame_id == "ptu_camera_color_optical_frame" :
-        # msg.header.frame_id = "ptu_camera_color_optical_frame_real"
-    # print(msg)
+    #print("waypoint callback")
+    #print(msg)
     publish_waypoint_frame(msg)
 
-
-def pc_callback(msg):
-    msg.header.frame_id = "ptu_camera_color_optical_frame_real"
-    pc_pub.publish(msg)
-
-
 if __name__ == '__main__':
-    demo = False
-    if len(sys.argv) > 1:
-        if sys.argv[1] == 'demo':
-            demo = True
-        else:
-            print("Invalid input argument")
-
     rospy.init_node('frame_publisher', anonymous=True)
     rospy.Subscriber('pose_to_reach', PoseStamped, callback)
     rospy.Subscriber('pose_to_reach_waypoint', PoseStamped, waypoint_callback)
@@ -121,10 +103,6 @@ if __name__ == '__main__':
     br_goal= tf2_ros.StaticTransformBroadcaster()
     br_grasp = tf2_ros.StaticTransformBroadcaster()
     br_waypoint = tf2_ros.StaticTransformBroadcaster()
-
-    if demo == True:
-        rospy.Subscriber('sensors/realsense/pointcloudGeometry/static', PointCloud2, pc_callback)
-        pc_pub = rospy.Publisher('sensors/realsense/pointcloudGeometry/static_corrected', PointCloud2, queue_size=1)
 
     try:
         rospy.spin()
