@@ -74,13 +74,10 @@ def transformFrame(tf_buffer, pose, orignalFrame, newFrame):
     transformed_pose_msg = tf_buffer.transform(pose, newFrame)
     return transformed_pose_msg
 
+def cartesianToSpherical(x, y, z):
 
-def cartessianToPolar(x, y, z):
-    print("cart: ", round(x,2), round(y,2), round(z,2))
     polar = math.atan2(math.sqrt(x**2 + y**2), z)
     azimuth = math.atan2(y, x)
-    if x <= 0:
-        azimuth += math.pi
     r = math.sqrt(x**2 + y**2 + z**2)
 
     return r, polar, azimuth
@@ -169,12 +166,11 @@ def main(demo):
             rate.sleep()
 
         # Evaluating the best grasp.
-        ee_frame = "right_ee_link"
         world_frame = "world"
-        if demo == True:
-            camera_frame = "ptu_camera_color_optical_frame_real"
-        else:
-            camera_frame = "ptu_camera_color_optical_frame"
+        camera_frame = "ptu_camera_color_optical_frame"
+        camera_frame2 = "ptu_camera_color_optical_frame_real"
+        camera_frame = camera_frame2
+        ee_frame = "right_ee_link"
 
         length_grasp_data = len(grasp_data.poses)
         good_grasps_idx = 0
@@ -233,127 +229,66 @@ def main(demo):
         while False:
             grasp = grasp_data.poses[i]
             grasp.header.frame_id = camera_frame
-            if i > len(grasp_data.poses):
-                break
-
-            if i >= 1:
-                break
-
-            grasp_world = transformFrame(tf_buffer, grasp, camera_frame, world_frame)
-            grasp_world_q = (
-                grasp_world.pose.orientation.x,
-                grasp_world.pose.orientation.y,
-                grasp_world.pose.orientation.z,
-                grasp_world.pose.orientation.w)
-            grasp_world_rpy = euler_from_quaternion(grasp_world_q)
-            grasp_world_rpy = np.asarray(grasp_world_rpy)
-            grasp_world_rpy = grasp_world_rpy*180/3.14159265359
-            print(grasp_world_rpy)
-
-            ee_transformation=tf_buffer.lookup_transform("world", "right_ee_link", rospy.Time.now(), rospy.Duration(1.0))
-            ee_q =(
-                ee_transformation.transform.rotation.x,
-                ee_transformation.transform.rotation.y,
-                ee_transformation.transform.rotation.z,
-                ee_transformation.transform.rotation.w)
-            ee_rpy = euler_from_quaternion(ee_q)
-            ee_rpy = np.asarray(ee_rpy)
-            ee_rpy = ee_rpy*180/3.14159265359
-            print(ee_rpy)
 
 
-            ee_q_inv = (
-                ee_transformation.transform.rotation.x,
-                ee_transformation.transform.rotation.y,
-                ee_transformation.transform.rotation.z,
-                -ee_transformation.transform.rotation.w)
-            qr=quaternion_multiply(grasp_world_q, ee_q_inv)
-            qr_rpy = euler_from_quaternion(qr)
-            qr_rpy = np.asarray(qr_rpy)
-            qr_rpy = qr_rpy*180/3.14159265359
-            print(qr_rpy)
+            graspCamera = copy.deepcopy(grasp)
+            waypointCamera = copy.deepcopy(grasp)
 
+            # computing waypoint in camera frame
+            quaternion = (
+                graspCamera.pose.orientation.x,
+                graspCamera.pose.orientation.y,
+                graspCamera.pose.orientation.z,
+                graspCamera.pose.orientation.w)
 
-            pub_grasp.publish(grasp)
+            rotMat = quaternion_matrix(quaternion)[:3,:3]
+            offset = np.array([[0.2], [0.0], [0.0]])
+            offset = np.transpose(np.matmul(rotMat, offset))[0]
 
+            waypointCamera.pose.position.x += -offset[0]
+            waypointCamera.pose.position.y += -offset[1]
+            waypointCamera.pose.position.z += -offset[2]
 
+            # computing waypoint and grasp in world frame
 
+            waypointWorld = transformFrame(tf_buffer, waypointCamera, camera_frame, world_frame)
+            graspWorld = transformFrame(tf_buffer, graspCamera, camera_frame, world_frame)
 
-            #add_waypoint(grasp, pub_waypoint)
+            # computing local cartesian coordinates
+            x = waypointWorld.pose.position.x - graspWorld.pose.position.x
+            y = waypointWorld.pose.position.y - graspWorld.pose.position.y
+            z = waypointWorld.pose.position.z - graspWorld.pose.position.z
 
+            # computing spherical coordinates
+            r, polarAngle, azimuthAngle = cartesianToSpherical(x, y, z)
 
-            """
-            waypoint_world = transformFrame(tf_buffer, wPoseOrigin, camera_frame, world_frame)
-            waypoint_world_q = (
-                waypoint_world.pose.orientation.x,
-                waypoint_world.pose.orientation.y,
-                waypoint_world.pose.orientation.z,
-                waypoint_world.pose.orientation.w)
-            """
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            """
-            wSphere = copy.deepcopy(wPoseOrigin)
-            wSphere = transformFrame(tf_buffer, wSphere, camera_frame, world_frame)
-            wGrasp = transformFrame(tf_buffer, grasp, camera_frame, world_frame)
-            wSphere.pose.position.x += -wGrasp.pose.position.y
-            wSphere.pose.position.y += -wGrasp.pose.position.y
-            wSphere.pose.position.z += -wGrasp.pose.position.z
-            x = wSphere.pose.position.x
-            y = wSphere.pose.position.y
-            z = wSphere.pose.position.z
-            print(x,y,z)
-
-            r, polarAngle, azimuthAngle = cartessianToPolar(x, y, z)
-
-            print(r, polarAngle, azimuthAngle)
-            azimuthAngleLimit = [-0.75*math.pi, -0.25*math.pi]
+            # Evaluating angle limits
+            azimuthAngleLimit = [-0.5*math.pi, -0.25*math.pi]
             polarAngleLimit = [0, 0.5*math.pi]
-            """
 
-            """
-            grasp_msg = grasp_data.poses[i]
-            grasp_msg.header.stamp = rospy.Time.now()
-            grasp_msg.header.frame_id = camera_frame
-            pub_grasp.publish(grasp_msg)
-            """
+            if azimuthAngle > azimuthAngleLimit[0] and azimuthAngle < azimuthAngleLimit[1]:
+                if polarAngle > polarAngleLimit[0] and polarAngle < polarAngleLimit[1]:
 
-            """
-            if polarAngle >= polarAngleLimit[0] and polarAngle <= polarAngleLimit[1]:
-                if azimuthAngle >= azimuthAngleLimit[0] and azimuthAngle <= azimuthAngleLimit[1]:
-                    grasp_msg = grasp_data.poses[i]
-                    grasp_msg.header.stamp = rospy.Time.now()
-                    grasp_msg.header.frame_id = camera_frame
-                    break
-            """
+                    waypointWorld.header.stamp = rospy.Time.now()
+                    waypointWorld.header.frame_id = world_frame
+                    graspWorld.header.stamp = rospy.Time.now()
+                    graspWorld.header.frame_id = world_frame
 
-
+                    waypoints.append(waypointWorld)
+                    graspMsg.append(graspWorld)
 
             i += 1
 
-        if grasp_msg == 0:
+        if len(grasps) == 0 or len(waypoints) == 0:
             print("Could not find grasp with appropriate angle")
-        #pub_grasp.publish(grasp_msg)
+        else:
+            pub_waypoint.publish(waypoints[0])
+            pub_grasp.publish(grasps[0])
         exit()
+        #"right_ee_link"
+
+        ############################## START HERE DANIEL #######################
+        add_waypoint(grasp_msg)
 
 if __name__ == "__main__":
-    demo = False
-    if len(sys.argv) > 1:
-        if sys.argv[1] == 'demo':
-            demo = True
-        else:
-            print("Invalid input argument")
-    main(demo)
+    main()
