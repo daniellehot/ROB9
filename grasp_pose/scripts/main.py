@@ -180,6 +180,7 @@ def main(demo):
         good_grasps_idx = 0
         sum_list = []
         weighted_sum_list = []
+        print "length_grasp_data", length_grasp_data
         for i in range(length_grasp_data):
             grasp = grasp_data.poses[i]
             if float(grasp.header.frame_id) > 0.25:
@@ -191,7 +192,7 @@ def main(demo):
                 rpy_delta = calculate_delta_orientation(tf_buffer, grasp_world)
                 print "rpy_delta ", rpy_delta
                 rpy_delta = abs(rpy_delta)
-                sum_rpy_delta = sum(rpy_delta)
+                sum_rpy_delta = 0.333*rpy_delta[0]+0.333*rpy_delta[1]+0.334*rpy_delta[2]
                 weighted_sum_rpy_delta = 0.2*rpy_delta[0]+0.4*rpy_delta[1]+0.4*rpy_delta[2]
                 print "sum", sum_rpy_delta
                 print "weighted sum", weighted_sum_rpy_delta

@@ -36,6 +36,7 @@ def transform_frame(msg):
 
 
 def move_to_ready():
+    print "Moving to ready..."
     ready_pose_msg = geometry_msgs.msg.Pose()
     ready_pose_msg.position.x = 0.4071
     ready_pose_msg.position.y = 0.1361
@@ -50,23 +51,24 @@ def move_to_ready():
     move_group.execute(plan, wait=True)
     move_group.stop()
     move_group.clear_pose_targets()
-
+    print "Moved to ready!"
 
 def send_trajectory_to_rviz(plan):
     display_trajectory = moveit_msgs.msg.DisplayTrajectory()
-    display_trajectory.trajectory_start = move_group.get_current_state()
+    display_trajectory.trajectory_start = robot.get_current_state()
     display_trajectory.trajectory.append(plan)
     display_trajectory_publisher.publish(display_trajectory)
 
 
 def send_goal_ee_pos(msg):
     print("Sending the goal pose")
-    print(msg)
     #move_group.set_pose_target(msg)
     #plan = move_group.go(wait=True)
-
-    waypoint=[msg.pose]
-    (plan, fraction) = move_group.compute_cartesian_path(waypoint, 0.01, 1.0)
+    current_pose = move_group.get_current_pose()
+    goal_pose=msg.pose
+    goal_pose.orientation = current_pose.pose.orientation
+    waypoints = [goal_pose]
+    (plan, fraction) = move_group.compute_cartesian_path(waypoints, 0.01, 0.0)
     print("Fraction")
     print(fraction)
     send_trajectory_to_rviz(plan)
@@ -75,16 +77,14 @@ def send_goal_ee_pos(msg):
     move_group.execute(plan, wait=True)
     move_group.stop()
     move_group.clear_pose_targets()
+    print("Done")
     rospy.sleep(10.)
-
     #move_to_ready()
     #gripper_pub.publish(close_gripper_msg)
-    print("Done")
-
 
 def callback(msg):
     print("Callback")
-    print(msg)
+    #print(msg)
     msg.header.frame_id = "ptu_camera_color_optical_frame_real"
     transform_frame(msg)
 
@@ -109,8 +109,22 @@ if __name__ == '__main__':
     gripper_pub = rospy.Publisher('gripper_controller', Int8, queue_size=1)
 
     moveit_commander.roscpp_initialize(sys.argv)
+    robot = moveit_commander.RobotCommander()
     move_group = moveit_commander.MoveGroupCommander("manipulator")
-    move_group.set_max_acceleration_scaling_factor(0.1)
+    """
+    planning_time = move_group.get_planning_time()
+    goal_orientation_tolerance = move_group.get_goal_orientation_tolerance()
+    goal_position_tolerance = move_group.get_goal_position_tolerance()
+    print "planning_time", planning_time
+    print "goal orientation tolerance", goal_orientation_tolerance
+    print "goal_position_tolerance", goal_position_tolerance
+    move_group.set_max_acceleration_scaling_factor(0.5)
+    move_group.set_max_velocity_scaling_factor(0.2)
+    move_group.set_planning_time(10)
+    move_group.set_num_planning_attempts(5)
+    move_group.set_goal_orientation_tolerance(0.01)
+    move_group.set_goal_position_tolerance(0.01)
+    """
     display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
                                                    moveit_msgs.msg.DisplayTrajectory,
                                                    queue_size=20)
