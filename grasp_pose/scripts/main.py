@@ -82,63 +82,23 @@ def cartesianToSpherical(x, y, z):
 
     return r, polar, azimuth
 
+def calculate_delta_orientation(graspWorld, eeWorld):
+    graspWorldQuaternion = (
+        graspWorld.pose.orientation.x,
+        graspWorld.pose.orientation.y,
+        graspWorld.pose.orientation.z,
+        graspWorld.pose.orientation.w)
+    graspWorldRPY = np.asarray(euler_from_quaternion(graspWorldQuaternion)) * 180 / math.pi
 
-def add_waypoint(grasp, pub):
-    # Contruct a waypoint, send a message
-    # print "add waypoint grasp \n", grasp
-    wPoseOrigin = copy.deepcopy(grasp)
-    quaternion = (
-        wPoseOrigin.pose.orientation.x,
-        wPoseOrigin.pose.orientation.y,
-        wPoseOrigin.pose.orientation.z,
-        wPoseOrigin.pose.orientation.w)
-    rotMat = quaternion_matrix(quaternion)[:3,:3]
-    offset = np.array([[0.0], [0.0], [-0.2]])
-    offset = np.transpose(np.matmul(rotMat, offset))[0]
-    # print "add waypoiny offset \n", offset
+    eeWorldQuaternionInv = (
+        eeWorld.transform.rotation.x,
+        eeWorld.transform.rotation.y,
+        eeWorld.transform.rotation.z,
+        -eeWorld.transform.rotation.w)
 
-    #wPoseOriginPos = np.array([wPoseOrigin.pose.position.x, wPoseOrigin.pose.position.y, wPoseOrigin.pose.position.z])
-    wPoseOrigin.pose.position.x += -offset[0]
-    wPoseOrigin.pose.position.y += -offset[1]
-    wPoseOrigin.pose.position.z += -offset[2]
-    wPoseOrigin.header.stamp = rospy.Time.now()
-    # print "add waypoint wPoseOrigin \n", wPoseOrigin
-    pub.publish(wPoseOrigin)
-
-def calculate_delta_orientation(tf_buffer, grasp_world):
-    grasp_world_q = (
-        grasp_world.pose.orientation.x,
-        grasp_world.pose.orientation.y,
-        grasp_world.pose.orientation.z,
-        grasp_world.pose.orientation.w)
-    grasp_world_rpy = euler_from_quaternion(grasp_world_q)
-    grasp_world_rpy = np.asarray(grasp_world_rpy)
-    grasp_world_rpy = grasp_world_rpy*180/3.14159265359
-    #print(grasp_world_rpy)
-
-    ee_transformation=tf_buffer.lookup_transform("world", "right_ee_link", rospy.Time.now(), rospy.Duration(1.0))
-    ee_q =(
-        ee_transformation.transform.rotation.x,
-        ee_transformation.transform.rotation.y,
-        ee_transformation.transform.rotation.z,
-        ee_transformation.transform.rotation.w)
-    ee_rpy = euler_from_quaternion(ee_q)
-    ee_rpy = np.asarray(ee_rpy)
-    ee_rpy = ee_rpy*180/3.14159265359
-    #print(ee_rpy)
-
-
-    ee_q_inv = (
-        ee_transformation.transform.rotation.x,
-        ee_transformation.transform.rotation.y,
-        ee_transformation.transform.rotation.z,
-        -ee_transformation.transform.rotation.w)
-    qr=quaternion_multiply(grasp_world_q, ee_q_inv)
-    qr_rpy = euler_from_quaternion(qr)
-    qr_rpy = np.asarray(qr_rpy)
-    qr_rpy = qr_rpy*180/3.14159265359
-    #print(qr_rpy)
-    return qr_rpy
+    deltaQuaternion = quaternion_multiply(graspWorldQuaternion, eeWorldQuaternionInv)
+    deltaRPY = np.asarray(euler_from_quaternion(qr)) * 180 / math.pi
+    return deltaRPY
 
 
 def main(demo):
@@ -167,68 +127,25 @@ def main(demo):
 
         # Evaluating the best grasp.
         world_frame = "world"
-        camera_frame = "ptu_camera_color_optical_frame"
-        camera_frame2 = "ptu_camera_color_optical_frame_real"
-        camera_frame = camera_frame2
         ee_frame = "right_ee_link"
+        if demo:
+            camera_frame = "ptu_camera_color_optical_frame_real"
+        else:
+            camera_frame = "ptu_camera_color_optical_frame"
 
-        length_grasp_data = len(grasp_data.poses)
-        good_grasps_idx = 0
-        sum_list = []
-        weighted_sum_list = []
-        for i in range(length_grasp_data):
+        graspData = []
+        for i in range(len(grasp_data.poses)):
             grasp = grasp_data.poses[i]
-            if float(grasp.header.frame_id) > 0.25:
-                good_grasps_idx += 1
-                grasp.header.frame_id = camera_frame
-                #pub_grasp.publish(grasp)
-                #rospy.sleep(2)
-                grasp_world = transformFrame(tf_buffer, grasp, camera_frame, world_frame)
-                rpy_delta = calculate_delta_orientation(tf_buffer, grasp_world)
-                print "rpy_delta ", rpy_delta
-                rpy_delta = abs(rpy_delta)
-                sum_rpy_delta = sum(rpy_delta)
-                weighted_sum_rpy_delta = 0.2*rpy_delta[0]+0.4*rpy_delta[1]+0.4*rpy_delta[2]
-                print "sum", sum_rpy_delta
-                print "weighted sum", weighted_sum_rpy_delta
-                sum_list.append(sum_rpy_delta)
-                weighted_sum_list.append(weighted_sum_rpy_delta)
-                print "--------------------------------------"
-        #print "sum_list", sum_list
-        min_sum = min(sum_list)
-        #print "min_sum", min_sum
-        min_index = sum_list.index(min_sum)
-        print "min_index", min_index
-        print "--------------------------------------"
-        grasp = grasp_data.poses[min_index]
-        #print "main \n", grasp
-        pub_grasp.publish(grasp)
+            if float(grasp.header.frame_id) > 0.2:
+                graspData.append(grasp)
 
-        min_sum = min(weighted_sum_list)
-        #print "min_sum", min_sum
-        min_index = weighted_sum_list.index(min_sum)
-        print "weighted min_index", min_index
-        print "--------------------------------------"
-        grasp = grasp_data.poses[min_index]
-        #print "main \n", grasp
-        pub_waypoint.publish(grasp)
-        #add_waypoint(grasp, pub_waypoint)
-        #print "published the good grasp"
-        exit()
+        i, grasps, waypoints = 0, [], []
+        while True:
 
-
-
-
-
-
-
-
-
-        i, grasp_msg = 0, 0
-        while False:
-            grasp = grasp_data.poses[i]
+            if i >= len(graspData):
+                break
+            grasp = graspData[i]
             grasp.header.frame_id = camera_frame
-
 
             graspCamera = copy.deepcopy(grasp)
             waypointCamera = copy.deepcopy(grasp)
@@ -274,7 +191,7 @@ def main(demo):
                     graspWorld.header.frame_id = world_frame
 
                     waypoints.append(waypointWorld)
-                    graspMsg.append(graspWorld)
+                    grasps.append(graspWorld)
 
             i += 1
 
@@ -283,11 +200,32 @@ def main(demo):
         else:
             pub_waypoint.publish(waypoints[0])
             pub_grasp.publish(grasps[0])
-        exit()
-        #"right_ee_link"
 
-        ############################## START HERE DANIEL #######################
-        add_waypoint(grasp_msg)
+        # Affordance segmentation here
+
+        exit()
+
+        # Finding the grasp with the least angle difference
+        eeWorld=tf_buffer.lookup_transform("world", "right_ee_link", rospy.Time.now(), rospy.Duration(1.0))
+
+        weightedSums = []
+
+        for i in range(len(grasps)):
+
+            deltaRPY = abs(calculate_delta_orientation(graspWorld, eeWorld))
+            weightedSum = 0.2*deltaRPY[0]+0.4*deltaRPY[1]+0.4*deltaRPY[2]
+            weightedSums.append(weightedSum)
+
+        minIndex = weightedSums.index(min(weightedSums))
+        pub_waypoint.publish(waypoints[min_index])
+        pub_grasp.publish(grasps[min_index])
 
 if __name__ == "__main__":
-    main()
+    demo = False
+    if len(sys.argv) > 1:
+        if sys.argv[1] == 'demo':
+            demo = True
+        else:
+            print("Invalid input argument")
+            exit()
+    main(demo)
