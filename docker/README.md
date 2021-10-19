@@ -2,6 +2,63 @@
 
 This folder contains all the docker image(s) produced for the ROB9 semester project
 
+## Pre-requisite
+
+1. Pull the latest version of rob9 from github
+
+2. Make sure you have docker and nvidia-docker installed
+
+3. Navigate to this folder
+```
+cd ROB9ROOTDIR/docker
+```
+
+4. To visualize from docker images
+```
+xhost +
+```
+
+## GraspNet
+
+This package is a docker image of the GraspNet from the implementation found here: https://github.com/graspnet/graspnet-baseline
+
+```
+@inproceedings{fang2020graspnet,
+  title={GraspNet-1Billion: A Large-Scale Benchmark for General Object Grasping},
+  author={Fang, Hao-Shu and Wang, Chenxi and Gou, Minghao and Lu, Cewu},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition(CVPR)},
+  pages={11444--11453},
+  year={2020}
+}
+```
+
+### A. Use prebuilt docker image
+```
+docker pull huchiewuchie/graspnet-rob9
+```
+
+### B. Build the docker image
+
+1. Build the graspnet base image containing the graspnet implementation
+
+```
+docker build --build-arg INCUBATOR_VER=$(date +%Y%m%d-%H%M%S) -t huchiewuchie/graspnet-base graspnet/graspnet-base
+
+```
+
+2. Build the docker image with the ROB9 files
+
+```
+docker build --build-arg INCUBATOR_VER=$(date +%Y%m%d-%H%M%S) -t huchiewuchie/graspnet-rob9 -f graspnet/graspnet-rob9/dockerfile ../
+```
+
+### C. Run the docker image
+
+```
+docker run --name graspnet-ros -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix/:/tmp/.X11-unix --net=host --gpus all --rm huchiewuchie/graspnet-rob9 /bin/bash
+```
+
+
 ## Affordance-Net
 
 This package is a docker image of the affordancenet from the implementation found here: https://github.com/nqanh/affordance-net
@@ -18,39 +75,34 @@ This package is a docker image of the affordancenet from the implementation foun
 ### A. Use prebuilt docker image
 
 1. Pull docker image
-docker pull huchiewuchie/affordancenet-ros
-
-2. run with gpu and networking
 
 ```
-docker run --name affordancenet-ROS -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix/:/tmp/.X11-unix --net=host --gpus all --rm affordancenet-ros /bin/bash
+docker pull huchiewuchie/affordancenet-rob9
 ```
 
-### B. built the docker image yourself
+### B. Build the docker image
 
-0. Make sure you have docker and nvidia-docker installed
 1.
 ```
-cd ROB9ROOTDIR/docker/affordancenet-base/affordancenet
+cd ROB9ROOTDIR/docker/affordancenet/affordancenet-base
 ```
+
 2. Download the pre-trained weights from
 here: https://drive.google.com/file/d/0Bx3H_TbKFPCjNlMtSGJlQ0dxVzQ/view?resourcekey=0-u8RCSHp2JpF9KJvj61lT6w
-and save it to: ROB9ROOTDIR/docker/affordancenet-base/affordancenet/AffordanceNet_200K.caffemodel
-3. Build affordancenet
+and save it to: ROB9ROOTDIR/docker/affordancenet/affordancenet-base/AffordanceNet_200K.caffemodel
+
+3. Build affordancenet-base containing the implementation
 ```
-docker build -t affordancenet .
-```
-4. change directory
-```
-cd ROB9ROOTDIR/docker/affordancenet-base/affordancenet-ros
+docker build -t huchiewuchie/affordancenet-base affordancenet/affordancenet-base
 ```
 
-5. build docker image
+4. build affordancenet-rob9 docker image with the ROB9 files
 ```
-docker build -t huchiewuchie/affordancenet-ros .
+docker build --build-arg INCUBATOR_VER=$(date +%Y%m%d-%H%M%S) -t huchiewuchie/affordancenet-rob9 -f affordancenet/affordancenet-rob9/dockerfile ../
 ```
 
-6. Test that it run
+### C. Run the docker image
+
 ```
-docker run --name affordancenet-ROS -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix/:/tmp/.X11-unix --net=host --gpus all --rm affordancenet-ros /bin/bash
+docker run --name affordancenet -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix/:/tmp/.X11-unix --net=host --gpus all --rm affordancenet-rob9 /bin/bash
 ```
