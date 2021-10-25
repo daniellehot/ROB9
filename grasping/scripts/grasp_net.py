@@ -35,7 +35,7 @@ parser.add_argument('--checkpoint_path', default=SCRIPT_DIR+'/checkpoint-rs.tar'
 parser.add_argument('--num_point', type=int, default=20000, help='Point Number [default: 20000]')
 parser.add_argument('--num_view', type=int, default=300, help='View Number [default: 300]')
 parser.add_argument('--collision_thresh', type=float, default=0.01, help='Collision Threshold in collision detection [default: 0.01]')
-parser.add_argument('--voxel_size', type=float, default=0.01, help='Voxel Size to process point clouds before collision detection [default: 0.01]')
+parser.add_argument('--voxel_size', type=float, default=0.2, help='Voxel Size to process point clouds before collision detection [default: 0.01]')
 parser.add_argument('--cam_width', type=int, default=1280)
 parser.add_argument('--cam_height', type=int, default=720)
 parser.add_argument('--vis', help="Visualize result", action="store_true")
@@ -90,6 +90,7 @@ def main():
                 if cfgs.collision_thresh > 0:
                     gg = collision_detection(gg, cloud)
                 gg.nms()
+                #print("non maxima surpression disabled")
                 gg = remove_grasps_under_score(gg, cfgs.score) #  Score range between 0 and 2. Under 0.1 bad, over 0.7 good
                 print("Took: ", (time.time()*1000) - tStart, " ms")
                 msg = generate_ros_message(gg, nr_of_grasps=0)  # nr_grasps = 0 is use all grasps

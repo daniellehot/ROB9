@@ -81,22 +81,14 @@ def sendRGB(command):
 
 
 def captureRealsense(capture):
-    global color_frame, depth_frame, depth_image, color_image, captured
+    global color_frame, depth_frame, depth_image, color_image, captured, framesRGB, framesDepth
     try:
         align_to = rs.stream.color
         align = rs.align(align_to)
-
-        frames = pipeline.wait_for_frames()
-        aligned_frames = align.process(frames)
-
-        color_frame = aligned_frames.get_color_frame()
-        depth_frame = aligned_frames.get_depth_frame()
-
-        # Convert images to numpy arrays
-        color_image = np.asanyarray(color_frame.get_data())
-        depth_image = np.asanyarray(depth_frame.get_data())
+        color_frame, depth_frame, color_image, depth_image = temporalFilter(framesRGB, framesDepth)
 
         generatePointcloud(depth_frame, color_frame, color_image)
+        print("here")
 
         captured = True
         msg = captureResponse()
@@ -126,7 +118,7 @@ def generatePointcloud(depth_frame, color_frame, color_image):
     idx = cloud[:,2] < 1.0
     cloud = cloud[idx]
     uv = uv[idx]
-    idxs = np.random.choice(cloud.shape[0], 20000, replace=False)
+    idxs = np.random.choice(cloud.shape[0], 40000, replace=False)
     cloud = cloud[idxs]
     uv = uv[idxs]
 
@@ -140,8 +132,29 @@ def generatePointcloud(depth_frame, color_frame, color_image):
     cloudGeometryStatic = cloud
     cloudColorStatic = colors
 
+def temporalFilter(framesRGB, framesDepth):
+
+    temporal = rs.temporal_filter()
+
+    for x in range(len(framesRGB)):
+        filteredRGB = temporal.process(framesRGB[x])
+
+    for x in range(len(framesDepth)):
+        filteredDepth = temporal.process(framesDepth[x])
+
+
+    color_frame = filteredRGB
+    depth_frame = filteredDepth
+    print(color_frame)
+    print(filteredDepth)
+    # Convert images to numpy arrays
+    color_image = np.asanyarray(filteredRGB.get_data())
+    depth_image = np.asanyarray(filteredDepth.get_data())
+
+    return filteredRGB, filteredDepth, color_image, depth_image
+
 if __name__ == "__main__":
-    global profile, pipeline, captured, color_image, depth_image, cloudGeometryStatic, cloudColorStatic
+    global profile, pipeline, captured, color_image, depth_image, cloudGeometryStatic, cloudColorStatic, framesRGB, framesDepth
 
     FIELDS_XYZ = [
         PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
@@ -165,12 +178,25 @@ if __name__ == "__main__":
     config.enable_stream(rs.stream.depth, cam_width, cam_height, rs.format.z16, 30)
     profile = pipeline.start(config)
 
+    depth_sensor = profile.get_device().first_depth_sensor()
+
+    preset_range = depth_sensor.get_option_range(rs.option.visual_preset)
+    for i in range(int(preset_range.max)):
+        visulpreset = depth_sensor.get_option_value_description(rs.option.visual_preset,i)
+        print(i,visulpreset)
+        if visulpreset == "High Accuracy":
+            depth_sensor.set_option(rs.option.visual_preset, i)
+            print("high accuracy")
+
     align_to = rs.stream.color
     align = rs.align(align_to)
 
     time.sleep(3)
     frames = pipeline.wait_for_frames()
     aligned_frames = align.process(frames)
+    print(aligned_frames)
+    print(aligned_frames.get_color_frame())
+    #exit()
 
     color_frame = aligned_frames.get_color_frame()
     depth_frame = aligned_frames.get_depth_frame()
@@ -204,10 +230,23 @@ if __name__ == "__main__":
 
     rate = rospy.Rate(6)
 
+    framesRGB, framesDepth = [], []
     while not rospy.is_shutdown():
+
+        frame = pipeline.wait_for_frames()
+        aligned_frame = align.process(frame)
+
+        framesRGB.append(aligned_frames.get_color_frame())
+        framesDepth.append(aligned_frames.get_depth_frame())
+        if len(framesRGB) > 10:
+            framesRGB.pop()
+        if len(framesDepth) > 10:
+            framesDepth.pop()
 
         # publish rgb static
         if captured:
+
+            print("Frames Captured")
 
             print("Sending: ", rospy.Time.now())
 

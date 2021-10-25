@@ -134,10 +134,12 @@ def main(demo):
             camera_frame = "ptu_camera_color_optical_frame"
 
         graspData = []
+
         for i in range(len(grasp_data.poses)):
             grasp = grasp_data.poses[i]
             if float(grasp.header.frame_id) > 0.2:
                 graspData.append(grasp)
+
 
         i, grasps, waypoints = 0, [], []
         while True:
@@ -182,6 +184,9 @@ def main(demo):
             azimuthAngleLimit = [-0.5*math.pi, -0.25*math.pi]
             polarAngleLimit = [0, 0.5*math.pi]
 
+            azimuthAngleLimit = [-1*math.pi, 1*math.pi]
+            polarAngleLimit = [0, 0.5*math.pi]
+
             if azimuthAngle > azimuthAngleLimit[0] and azimuthAngle < azimuthAngleLimit[1]:
                 if polarAngle > polarAngleLimit[0] and polarAngle < polarAngleLimit[1]:
 
@@ -192,6 +197,10 @@ def main(demo):
 
                     waypoints.append(waypointWorld)
                     grasps.append(graspWorld)
+
+                    pub_waypoint.publish(waypoints[-1])
+                    pub_grasp.publish(grasps[-1])
+                    rospy.sleep(1)
 
             i += 1
 
