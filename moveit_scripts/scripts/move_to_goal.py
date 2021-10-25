@@ -53,6 +53,7 @@ def move_to_ready():
     move_group.clear_pose_targets()
     print "Moved to ready!"
 
+
 def send_trajectory_to_rviz(plan):
     display_trajectory = moveit_msgs.msg.DisplayTrajectory()
     display_trajectory.trajectory_start = robot.get_current_state()
@@ -61,14 +62,46 @@ def send_trajectory_to_rviz(plan):
 
 
 def send_goal_ee_pos(msg):
-    print("Sending the goal pose")
+    print("Sending the goal pose", msg)
     #move_group.set_pose_target(msg)
     #plan = move_group.go(wait=True)
+    waypoint = geometry_msgs.msg.Pose()
+    waypoints = []
+
     current_pose = move_group.get_current_pose()
-    goal_pose=msg.pose
-    goal_pose.orientation = current_pose.pose.orientation
-    waypoints = [goal_pose]
-    (plan, fraction) = move_group.compute_cartesian_path(waypoints, 0.01, 0.0)
+    waypoint = current_pose.pose
+    waypoints.append(waypoint)
+    (plan, fraction) = move_group.compute_cartesian_path(waypoints, 0.01, 10.0)
+    print("Fraction Current Pose")
+    print(fraction)
+
+    waypoint.position.x = msg.pose.position.x
+    waypoints.append(waypoint)
+    (plan, fraction) = move_group.compute_cartesian_path(waypoints, 0.01, 10.0)
+    print("Fraction msg X")
+    print(fraction)
+
+    waypoint.position.y = msg.pose.position.y
+    waypoints.append(waypoint)
+    (plan, fraction) = move_group.compute_cartesian_path(waypoints, 0.01, 10.0)
+    print("Fraction msg Y")
+    print(fraction)
+
+    waypoint.position.z = msg.pose.position.z
+    waypoints.append(waypoint)
+    (plan, fraction) = move_group.compute_cartesian_path(waypoints, 0.01, 10.0)
+    print("Fraction msg Z")
+    print(fraction)
+
+    waypoint.orientation = msg.pose.orientation
+    waypoints.append(waypoint)
+    (plan, fraction) = move_group.compute_cartesian_path(waypoints, 0.01, 10.0)
+    print("Fraction msg orientation")
+    print(fraction)
+
+    waypoints = []
+    waypoints.append(msg.pose)
+    (plan, fraction) = move_group.compute_cartesian_path(waypoints, 0.01, 10.0)
     print("Fraction")
     print(fraction)
     send_trajectory_to_rviz(plan)
@@ -85,8 +118,10 @@ def send_goal_ee_pos(msg):
 def callback(msg):
     print("Callback")
     #print(msg)
-    msg.header.frame_id = "ptu_camera_color_optical_frame_real"
-    transform_frame(msg)
+    if msg.header.frame_id != "world":
+        transform_frame(msg)
+    else:
+        send_goal_ee_pos(msg)
 
 def reset_callback(msg):
     print("Reset callback")
@@ -118,13 +153,15 @@ if __name__ == '__main__':
     print "planning_time", planning_time
     print "goal orientation tolerance", goal_orientation_tolerance
     print "goal_position_tolerance", goal_position_tolerance
-    move_group.set_max_acceleration_scaling_factor(0.5)
-    move_group.set_max_velocity_scaling_factor(0.2)
-    move_group.set_planning_time(10)
-    move_group.set_num_planning_attempts(5)
-    move_group.set_goal_orientation_tolerance(0.01)
-    move_group.set_goal_position_tolerance(0.01)
     """
+    move_group.allow_replanning(True)
+    move_group.set_max_acceleration_scaling_factor(0.5)
+    move_group.set_max_velocity_scaling_factor(0.5)
+    move_group.set_planning_time(0.5)
+    move_group.set_num_planning_attempts(25)
+    move_group.set_goal_orientation_tolerance(0.1)
+    move_group.set_goal_position_tolerance(0.01)
+
     display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
                                                    moveit_msgs.msg.DisplayTrajectory,
                                                    queue_size=20)
