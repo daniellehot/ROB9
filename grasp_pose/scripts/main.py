@@ -8,6 +8,7 @@ import numpy as np
 import cv2
 from std_msgs.msg import Bool
 from nav_msgs.msg import Path
+from std_msgs.msg import Float32MultiArray
 import geometry_msgs.msg
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Pose
@@ -47,6 +48,9 @@ def getAffordanceResult():
     print(masks.dtype)
     print(bbox)
     print(objects)
+
+    return  masks, objects, bbox
+
     for j in range(3):
         for i in range(10):
             print(j,i)
@@ -74,6 +78,7 @@ def transformFrame(tf_buffer, pose, orignalFrame, newFrame):
     transformed_pose_msg = tf_buffer.transform(pose, newFrame)
     return transformed_pose_msg
 
+
 def cartesianToSpherical(x, y, z):
 
     polar = math.atan2(math.sqrt(x**2 + y**2), z)
@@ -81,6 +86,7 @@ def cartesianToSpherical(x, y, z):
     r = math.sqrt(x**2 + y**2 + z**2)
 
     return r, polar, azimuth
+
 
 def calculate_delta_orientation(graspWorld, eeWorld):
     graspWorldQuaternion = (
@@ -101,8 +107,53 @@ def calculate_delta_orientation(graspWorld, eeWorld):
     return deltaRPY
 
 
+def callbackPointCloud(data):
+    global cloud
+    print("Got geometry")
+    cloud = convertCloudFromRosToOpen3d(data)
+
+
+def callbackPointCloudIndex(msg):
+    global cloud_idx
+    print("got point cloud index")
+    cloud_idx = msg.data
+
+
+def convertCloudFromRosToOpen3d(ros_cloud):
+
+    # Get cloud data from ros_cloud
+    field_names=[field.name for field in ros_cloud.fields]
+    cloud_data = list(pc2.read_points(ros_cloud, skip_nans=True, field_names = field_names))
+
+    # Check empty
+    if len(cloud_data)==0:
+        print("Converting an empty cloud")
+        return None
+
+    xyz = [(x,y,z) for x,y,z in cloud_data ] # get xyz
+    xyz = np.array(xyz)
+    xyz = xyz[xyz[:,2] < 1.0]
+
+    # return
+    return xyz
+
+
+def inSphere(self, point, ref, radius):
+
+    # Calculate the difference between the reference and measuring point
+    diff = np.subtract(point, ref)
+
+    # Calculate square length of vector (distance between ref and point)^2
+    dist = np.sum(np.power(diff, 2))
+
+    # If dist is less than radius^2, return True, else return False
+    return dist < radius ** 2
+
+
 def main(demo):
-    global new_grasps, grasp_data
+    global new_grasps, grasp_data, cloud, cloud_idx
+    cloud = None
+    cloud_idx = None
     if not rospy.is_shutdown():
         rospy.init_node('grasp_pose', anonymous=True)
         tf_buffer = tf2_ros.Buffer()
@@ -112,6 +163,8 @@ def main(demo):
         pub_graspnet = rospy.Publisher('start_graspnet', Bool, queue_size=10)
         pub_grasp = rospy.Publisher('pose_to_reach', PoseStamped, queue_size=10)
         pub_waypoint = rospy.Publisher('pose_to_reach_waypoint', PoseStamped, queue_size=10)
+        rospy.Subscriber("/sensors/realsense/pointcloudGeometry/static", PointCloud2, callbackPointCloud)
+        rospy.Subscriber("/sensors/realsense/pointcloudGeometry/static/index", PointCloud2, callbackPointCloudIndex)
         rate = rospy.Rate(5)
 
         # only capture a new scene at startup
@@ -125,13 +178,15 @@ def main(demo):
         while not new_grasps and not rospy.is_shutdown():
             rate.sleep()
 
-        # Evaluating the best grasp.
-        world_frame = "world"
-        ee_frame = "right_ee_link"
         if demo:
             camera_frame = "ptu_camera_color_optical_frame_real"
         else:
             camera_frame = "ptu_camera_color_optical_frame"
+
+        eval_best_grasp(camera_frame)
+        # Evaluating the best grasp.
+        world_frame = "world"
+        ee_frame = "right_ee_link"
 
         graspData = []
 
@@ -140,6 +195,9 @@ def main(demo):
             if float(grasp.header.frame_id) > 0.2:
                 graspData.append(grasp)
 
+        with open('grasps.txt', 'w') as file_handler:
+            for item in graspData:
+                file_handler.write("{}\n".format(item))
 
         i, grasps, waypoints = 0, [], []
         while True:
@@ -210,9 +268,17 @@ def main(demo):
             pub_waypoint.publish(waypoints[0])
             pub_grasp.publish(grasps[0])
 
-        # Affordance segmentation here
-
         exit()
+
+        # Affordance segmentation here
+        # Get mask and objects from affordance net
+        mask, obj, bbox = getAffordanceResult()
+
+        #Get pointcloud (Is not the same as the one that graspnet got)
+        while cloud or cloud_idx is None:
+            rate.sleep
+
+
 
         # Finding the grasp with the least angle difference
         eeWorld=tf_buffer.lookup_transform("world", "right_ee_link", rospy.Time.now(), rospy.Duration(1.0))
