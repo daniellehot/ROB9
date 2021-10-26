@@ -18,49 +18,6 @@ from ctypes import * # convert float to uint32
 cam_width = 1280
 cam_height = 720
 
-class CameraInfo():
-    # from https://github.com/graspnet/graspnet-baseline/blob/main/utils/data_utils.py
-    """ Camera intrisics for point cloud creation. """
-    def __init__(self, width, height, fx, fy, cx, cy, scale):
-        self.width = width
-        self.height = height
-        self.fx = fx
-        self.fy = fy
-        self.cx = cx
-        self.cy = cy
-        self.scale = scale
-
-def create_point_cloud_from_depth_image(depth, camera, organized=True):
-    # from https://github.com/graspnet/graspnet-baseline/blob/main/utils/data_utils.py
-    """ Generate point cloud using depth image only.
-        Input:
-            depth: [numpy.ndarray, (H,W), numpy.float32]
-                depth image
-            camera: [CameraInfo]
-                camera intrinsics
-            organized: bool
-                whether to keep the cloud in image shape (H,W,3)
-        Output:
-            cloud: [numpy.ndarray, (H,W,3)/(H*W,3), numpy.float32]
-                generated cloud, (H,W,3) for organized=True, (H*W,3) for organized=False
-    """
-    assert(depth.shape[0] == camera.height and depth.shape[1] == camera.width)
-    xmap = np.arange(camera.width)
-    ymap = np.arange(camera.height)
-    xmap, ymap = np.meshgrid(xmap, ymap)
-    points_z = depth / camera.scale
-    points_x = (xmap - camera.cx) * points_z / camera.fx
-    points_y = (ymap - camera.cy) * points_z / camera.fy
-    cloudGeom = np.stack([points_x, points_y, points_z], axis=-1)
-    cloudPoints = np.reshape(cloudGeom, (-1,3)).astype(np.float32)
-
-    # convert data
-    cloudPoints = cloudPoints[cloudPoints[:,2] < 1.0]
-    cloudPoints = cloudPoints[cloudPoints[:,2] > 0.0]
-    cloudPoints = cloudPoints[cloudPoints[:,0] < 0.8]
-    cloudPoints = cloudPoints[cloudPoints[:,0] > -0.8]
-    return cloudPoints
-
 
 def sendIntrinsics():
     pass
@@ -104,7 +61,7 @@ def generatePointcloud(depth_frame, color_frame, color_image):
     global cloudGeometryStatic, cloudColorStatic
 
     cloud = rs.pointcloud()
-    cloud.map_to(color_frame);
+    cloud.map_to(color_frame)
     points = rs.points()
     points = cloud.calculate(depth_frame)
     cloud = np.array(np.array(points.get_vertices()).tolist())
@@ -229,7 +186,6 @@ if __name__ == "__main__":
     fy = intr.fy
     ppx = intr.ppx
     ppy = intr.ppy
-    camera = CameraInfo(1280.0, 720.0, fx, fy, ppx, ppy, 1000)
 
     rate = rospy.Rate(6)
 
