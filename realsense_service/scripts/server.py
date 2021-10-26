@@ -132,6 +132,8 @@ def generatePointcloud(depth_frame, color_frame, color_image):
     cloudGeometryStatic = cloud
     cloudColorStatic = colors
 
+    return uv
+
 def temporalFilter(framesRGB, framesDepth):
 
     temporal = rs.temporal_filter()
@@ -205,7 +207,7 @@ if __name__ == "__main__":
     color_image = np.asanyarray(color_frame.get_data())
     depth_image = np.asanyarray(depth_frame.get_data())
 
-    generatePointcloud(depth_frame, color_frame, color_image)
+    uv_data = generatePointcloud(depth_frame, color_frame, color_image)
 
     captured = True
 
@@ -219,6 +221,7 @@ if __name__ == "__main__":
     pubStaticRGB = rospy.Publisher("/sensors/realsense/rgb/static", Image, queue_size=1)
     pubStaticDepth = rospy.Publisher("sensors/realsense/depth/static", Image, queue_size = 1)
     pubPointCloudGeometryStaticRGB = rospy.Publisher('/sensors/realsense/pointcloudGeometry/static/rgb', Float32MultiArray, queue_size=1)
+    pubPointCloudGeometryStaticIndex = rospy.Publisher('/sensors/realsense/pointcloudGeometry/static/index', Float32MultiArray, queue_size=1)
 
     intr = profile.get_stream(rs.stream.depth).as_video_stream_profile().get_intrinsics()
 
@@ -263,6 +266,11 @@ if __name__ == "__main__":
             msg = Float32MultiArray()
             msg.data = cloudColorStatic
             pubPointCloudGeometryStaticRGB.publish(msg)
+
+            #publish index in point cloud
+            msg = Float32MultiArray()
+            msg.data = uv_data
+            pubPointCloudGeometryStaticIndex.publish(msg)
 
 
         rate.sleep()
