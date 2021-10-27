@@ -256,9 +256,9 @@ def main(demo):
                     waypoints.append(waypointWorld)
                     grasps.append(graspWorld)
 
-                    pub_waypoint.publish(waypoints[-1])
-                    pub_grasp.publish(grasps[-1])
-                    rospy.sleep(1)
+                    # pub_waypoint.publish(waypoints[-1])
+                    # pub_grasp.publish(grasps[-1])
+                    # rospy.sleep(1)
 
             i += 1
 
