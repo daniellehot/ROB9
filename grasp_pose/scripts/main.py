@@ -8,9 +8,10 @@ import numpy as np
 import cv2
 from std_msgs.msg import Bool
 from nav_msgs.msg import Path
+from std_msgs.msg import Float32MultiArray
 import geometry_msgs.msg
-from geometry_msgs.msg import PoseStamped
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import PoseStamped, Pose, PoseArray
+# from geometry_msgs.msg import Pose
 import tf2_ros
 import tf2_geometry_msgs
 import tf_conversions
@@ -18,6 +19,8 @@ import tf2_ros
 from tf.transformations import euler_from_quaternion, quaternion_from_euler, quaternion_matrix, quaternion_multiply
 import copy
 import math
+from sensor_msgs.msg import PointCloud2
+import sensor_msgs.point_cloud2 as pc2
 
 
 def captureNewScene():
@@ -161,7 +164,7 @@ def main(demo):
                 graspCamera.pose.orientation.w)
 
             rotMat = quaternion_matrix(quaternion)[:3,:3]
-            offset = np.array([[0.2], [0.0], [0.0]])
+            offset = np.array([[0.15], [0.0], [0.0]])
             offset = np.transpose(np.matmul(rotMat, offset))[0]
 
             waypointCamera.pose.position.x += -offset[0]
@@ -183,10 +186,10 @@ def main(demo):
 
             # Evaluating angle limits
             azimuthAngleLimit = [-0.5*math.pi, -0.25*math.pi]
-            polarAngleLimit = [0, 0.5*math.pi]
+            polarAngleLimit = [0, 0.35*math.pi]
 
-            azimuthAngleLimit = [-1*math.pi, 1*math.pi]
-            polarAngleLimit = [0, 0.5*math.pi]
+            #azimuthAngleLimit = [-1*math.pi, 1*math.pi]
+            #polarAngleLimit = [0, 0.5*math.pi]
 
             if azimuthAngle > azimuthAngleLimit[0] and azimuthAngle < azimuthAngleLimit[1]:
                 if polarAngle > polarAngleLimit[0] and polarAngle < polarAngleLimit[1]:
@@ -209,15 +212,17 @@ def main(demo):
             print("Could not find grasp with appropriate angle")
         else:
             # publish both the waypoint and the grasp to their own topics for visualisation
-            pub_waypoint.publish(waypoints[0])
-            pub_grasp.publish(grasps[0])
+            #pub_waypoint.publish(waypoints[0])
+            #pub_grasp.publish(grasps[0])
             # now publish both as a single message for moveit
-            poses = geometry_msgs.msg.PoseArray
-            poses.header.frame_id = "world"
+            poses = geometry_msgs.msg.PoseArray()
+            poses.header.frame_id = grasps[0].header.frame_id
             poses.header.stamp = rospy.Time.now()
-            poses.poses[0] = waypoints[0]
-            poses.poses[1] = grasps[0]
+            for i in range(len(grasps)):
+                poses.poses.append(waypoints[i].pose)
+                poses.poses.append(grasps[i].pose)
             pub_poses.publish(poses)
+            print("Published poses")
 
 
         # Affordance segmentation here
