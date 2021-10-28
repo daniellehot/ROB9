@@ -70,9 +70,6 @@ class Realsense(object):
 
     def initializeRealsense(self):
 
-        # Initially no images are available
-        self.captured = False
-
         self.pipeline = rs.pipeline()
         self.config = rs.config()
 
@@ -107,22 +104,6 @@ class Realsense(object):
         self.cloudGeometryStatic = self.cloudGeometry
         self.cloudColorStatic = self.cloudColor
         self.uvStatic = self.uv
-
-        """
-        self.frames = self.pipeline.wait_for_frames()
-        self.aligned_frames = self.align.process(self.frames)
-
-        self.color_frame = self.aligned_frames.get_color_frame()
-        self.depth_frame = self.aligned_frames.get_depth_frame()
-
-        # Convert images to numpy arrays
-        self.color_image = np.asanyarray(self.color_frame.get_data())
-        self.depth_image = np.asanyarray(self.depth_frame.get_data())
-        """
-
-        #self.uv_data = self.generatePointcloud(depth_frame=self.depth_frame, color_frame=self.color_frame, color_image=self.color_image)
-
-        self.captured = True
 
         self.intrinsics = self.profile.get_stream(rs.stream.depth).as_video_stream_profile().get_intrinsics()
 
@@ -197,11 +178,8 @@ class Realsense(object):
         todo = True
 
     def serviceSendDepthImageStatic(self, command):
-        msg = depthResponse()
-        msg.img.data = self.depthImageStatic.flatten()
-        msg.width.data = self.depthImageStatic.shape[1]
-        msg.height.data = self.depthImageStatic.shape[0]
-        return msg
+        br = CvBridge()
+        return br.cv2_to_imgmsg(self.depthImageStatic)
 
     def serviceSendRGBImageStatic(self, command):
         br = CvBridge()

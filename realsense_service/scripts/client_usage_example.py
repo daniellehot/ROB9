@@ -34,14 +34,7 @@ def getDepth():
     msg = depth()
     msg.data = True
     response = depthService(msg)
-    w = response.width.data
-    h = response.height.data
-    depthImg = np.asarray(response.img.data).reshape((h,w)) # use this depth image
-    vis0 = np.asarray(response.img.data).reshape((h,w)) / 256.0
-    vis0 = vis0.astype(np.ubyte)
-    vis0 = np.uint8(255-vis0) # only for visualization purposes
-    cv2.imshow("Depth image visualization", vis0)
-    cv2.waitKey(0)
+    img = np.frombuffer(response.img.data, dtype=np.uint8).reshape(response.img.height, response.img.width, -1)
 
 if __name__ == "__main__":
     print("Usage example of client server service")
