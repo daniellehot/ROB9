@@ -42,4 +42,5 @@ COPY rob9 /ROB9/src/rob9
 WORKDIR /ROB9
 RUN /bin/bash -c '. /opt/ros/melodic/setup.bash; cd /ROB9; catkin_make'
 
-ENTRYPOINT source /ROB9/devel/setup.bash && source /ROB9/src/rob9/connect.sh && export QT_X11_NO_MITSHM=1 && rosrun grasping grasp_net.py
+#ENTRYPOINT source /ROB9/devel/setup.bash && source /ROB9/src/rob9/connect.sh && export QT_X11_NO_MITSHM=1 && rosrun grasping grasp_net.py
+ENTRYPOINT source /ROB9/devel/setup.bash && source /ROB9/src/rob9/connect.sh && export QT_X11_NO_MITSHM=1 && /bin/bash
