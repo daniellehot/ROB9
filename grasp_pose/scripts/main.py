@@ -111,6 +111,7 @@ def main(demo):
         rospy.Subscriber("grasps", Path, grasp_callback)
         pub_graspnet = rospy.Publisher('start_graspnet', Bool, queue_size=10)
         pub_grasp = rospy.Publisher('pose_to_reach', PoseStamped, queue_size=10)
+        pub_poses = rospy.Publisher('poses_to_reach', PoseArray, queue_size=10)
         pub_waypoint = rospy.Publisher('pose_to_reach_waypoint', PoseStamped, queue_size=10)
         rate = rospy.Rate(5)
 
@@ -207,8 +208,17 @@ def main(demo):
         if len(grasps) == 0 or len(waypoints) == 0:
             print("Could not find grasp with appropriate angle")
         else:
+            # publish both the waypoint and the grasp to their own topics for visualisation
             pub_waypoint.publish(waypoints[0])
             pub_grasp.publish(grasps[0])
+            # now publish both as a single message for moveit
+            poses = geometry_msgs.msg.PoseArray
+            poses.header.frame_id = "world"
+            poses.header.stamp = rospy.Time.now()
+            poses.poses[0] = waypoints[0]
+            poses.poses[1] = grasps[0]
+            pub_poses.publish(poses)
+
 
         # Affordance segmentation here
 

@@ -5,9 +5,9 @@ import rospy
 import moveit_commander
 from moveit_commander.conversions import pose_to_list
 import moveit_msgs.msg
-import geometry_msgs.msg
-from geometry_msgs.msg import PoseStamped
-from geometry_msgs.msg import Pose
+# import geometry_msgs.msg
+from geometry_msgs.msg import Pose, PoseStamped, PoseArray
+# from geometry_msgs.msg import Pose
 import std_msgs.msg
 from std_msgs.msg import Int8
 from math import pi
@@ -15,45 +15,57 @@ import tf2_ros
 import tf2_geometry_msgs
 import tf_conversions
 import tf2_ros
-
 # from robotiq_3f_gripper_articulated_msgs.msg import Robotiq3FGripperRobotOutput
 
+
 def transform_frame(msg):
-    transformed_pose_msg = geometry_msgs.msg.PoseStamped()
-    trans = tf_buffer.lookup_transform(msg.header.frame_id, 'world', rospy.Time.now(), rospy.Duration(1.0))
-    transformed_pose_msg = tf_buffer.transform(msg, "world")
-    #send_goal_ee_pos(transformed_pose_msg)
-    compute_trajectory(msg)
+    print("Transforming message to the world frame")
+    transformed_poses = geometry_msgs.msg.PoseArray()
+    transformed_poses.header.frame_id = "world"
+    tf_buffer.lookup_transform(msg.header.frame_id, 'world', rospy.Time.now(), rospy.Duration(1.0))
+    for i in range(len(msg.poses)):
+        transformed_pose_msg = geometry_msgs.msg.PoseStamped()
+        transformed_pose_msg = tf_buffer.transform(msg.pose[i], "world")
+        transformed_poses.poses[i] = transformed_pose_msg.pose
+    transformed_poses.header.stamp = rospy.Time.now()
+    move_to_goal(trasnformed_poses)
+
 
 def move_to_ready():
     print "Moving to ready..."
-    ready_pose_msg = geometry_msgs.msg.Pose()
-    ready_pose_msg.position.x = 0.4071
-    ready_pose_msg.position.y = 0.1361
-    ready_pose_msg.position.z = 1.6743
-    ready_pose_msg.orientation.x = -0.0575
-    ready_pose_msg.orientation.y = 0.4495
-    ready_pose_msg.orientation.z = 0.7546
-    ready_pose_msg.orientation.w = 0.4745
+    ready_pose_msg = geometry_msgs.msg.PoseStamped()
+    ready_pose_msg.header.frame_id = "world"
+    ready_pose_msg.header.stamp = ros.Time.now()
+    ready_pose_msg.pose.position.x = 0.4071
+    ready_pose_msg.pose.position.y = 0.1361
+    ready_pose_msg.pose.position.z = 1.6743
+    ready_pose_msg.pose.orientation.x = -0.0575
+    ready_pose_msg.pose.orientation.y = 0.4495
+    ready_pose_msg.pose.orientation.z = 0.7546
+    ready_pose_msg.pose.orientation.w = 0.4745
 
-    waypoint=[ready_pose_msg]
-    (plan, fraction) = move_group.compute_cartesian_path(waypoint, 0.01, 0.0)
-    move_group.execute(plan, wait=True)
-    move_group.stop()
-    move_group.clear_pose_targets()
+    compute_trajectory(ready_pose_msg)
     print "Moved to ready!"
 
+
 def send_trajectory_to_rviz(plan):
+    print("Trajectory was sent to RViZ")
     display_trajectory = moveit_msgs.msg.DisplayTrajectory()
     display_trajectory.trajectory_start = robot.get_current_state()
     display_trajectory.trajectory.append(plan)
     display_trajectory_publisher.publish(display_trajectory)
 
 
-def send_goal_ee_pos(msg):
-    print("Sending the goal pose")
-    #move_group.set_pose_target(msg)
-    #plan = move_group.go(wait=True)
+def move_to_goal(poses_msg):
+    print("Moving to the goal")
+    goal_msg = geometry_msgs.msg.PoseStamped()
+    for i in range(len(poses_msg.poses)):
+        goal_msg.header.frame_id = poses_msg.header.frame_id
+        goal_msg.header.stamp = rospy.Time.now()
+        goal_msg.pose = poses_msg.poses[i]
+        compute_trajectory(goal_msg)
+    move_to_ready()
+
 
 def compute_trajectory(msg):
     print("Computing a cartesian trajectory")
@@ -75,9 +87,7 @@ def compute_trajectory(msg):
         move_group.clear_pose_targets()
         print("Done")
         rospy.sleep(5.)
-        move_to_ready()
     else:
-        print("Could not calculate complete cartesian path. Switching to a joint space trajectory")
         compute_joint_trajectory(msg)
 
 def compute_joint_trajectory(msg):
@@ -109,13 +119,12 @@ def compute_joint_trajectory(msg):
 
 def callback(msg):
     print("Callback")
-    #print(msg)
+    print(msg)
+    exit()
     if msg.header.frame_id != "world":
         transform_frame(msg)
     else:
-        #send_goal_ee_pos(msg)
-        #compute_trajectory(msg)
-        compute_joint_trajectory(msg)
+        move_to_goal(msg)
 
 def reset_callback(msg):
     print("Reset callback")
@@ -133,7 +142,7 @@ def reset_callback(msg):
 
 if __name__ == '__main__':
     rospy.init_node('moveit_subscriber', anonymous=True)
-    rospy.Subscriber('pose_to_reach', PoseStamped, callback)
+    rospy.Subscriber('poses_to_reach', PoseArray, callback)
     rospy.Subscriber('reset_robot', Int8, reset_callback)
     gripper_pub = rospy.Publisher('gripper_controller', Int8, queue_size=1)
 
