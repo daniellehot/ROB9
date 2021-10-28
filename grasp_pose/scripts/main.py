@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 import sys
 import rospy
-import std_msgs.msg
 from affordancenet_service.srv import *
 from realsense_service.srv import *
 import numpy as np
 import cv2
+import std_msgs.msg
 from std_msgs.msg import Bool
-from nav_msgs.msg import Path
 from std_msgs.msg import Float32MultiArray
+from nav_msgs.msg import Path
 import geometry_msgs.msg
-from geometry_msgs.msg import PoseStamped
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import PoseStamped, Pose, PoseArray
+# from geometry_msgs.msg import Pose
 import tf2_ros
 import tf2_geometry_msgs
 import tf_conversions
@@ -19,6 +19,9 @@ import tf2_ros
 from tf.transformations import euler_from_quaternion, quaternion_from_euler, quaternion_matrix, quaternion_multiply
 import copy
 import math
+from sensor_msgs.msg import PointCloud2
+import sensor_msgs.point_cloud2 as pc2
+
 
 
 def captureNewScene():
@@ -162,9 +165,10 @@ def main(demo):
         rospy.Subscriber("grasps", Path, grasp_callback)
         pub_graspnet = rospy.Publisher('start_graspnet', Bool, queue_size=10)
         pub_grasp = rospy.Publisher('pose_to_reach', PoseStamped, queue_size=10)
+        pub_poses = rospy.Publisher('poses_to_reach', PoseArray, queue_size=10)
         pub_waypoint = rospy.Publisher('pose_to_reach_waypoint', PoseStamped, queue_size=10)
         rospy.Subscriber("/sensors/realsense/pointcloudGeometry/static", PointCloud2, callbackPointCloud)
-        rospy.Subscriber("/sensors/realsense/pointcloudGeometry/static/index", PointCloud2, callbackPointCloudIndex)
+        # rospy.Subscriber("/sensors/realsense/pointcloudGeometry/static/index", PointCloud2, callbackPointCloudIndex)
         rate = rospy.Rate(5)
 
         # only capture a new scene at startup
@@ -183,7 +187,7 @@ def main(demo):
         else:
             camera_frame = "ptu_camera_color_optical_frame"
 
-        eval_best_grasp(camera_frame)
+        # eval_best_grasp(camera_frame)
         # Evaluating the best grasp.
         world_frame = "world"
         ee_frame = "right_ee_link"
@@ -265,8 +269,16 @@ def main(demo):
         if len(grasps) == 0 or len(waypoints) == 0:
             print("Could not find grasp with appropriate angle")
         else:
+            # publish both the waypoint and the grasp to their own topics for visualisation
             pub_waypoint.publish(waypoints[0])
             pub_grasp.publish(grasps[0])
+            # now publish both as a single message for moveit
+            poses_msg = geometry_msgs.msg.PoseArray()
+            poses_msg.header.frame_id = "world"
+            poses_msg.header.stamp = rospy.Time.now()
+            poses_msg.poses.append(waypoints[0].pose)
+            poses_msg.poses[1] = grasps[0].pose
+            pub_poses.publish(poses_msg)
 
         exit()
 
