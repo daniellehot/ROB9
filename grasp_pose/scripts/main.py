@@ -275,8 +275,6 @@ def main(demo):
         # print(search_min)
         # print(search_max)
 
-        exit()
-
         print('Waiting for grasps from graspnet...')
         while not new_grasps and not rospy.is_shutdown():
             rate.sleep()
@@ -298,7 +296,81 @@ def main(demo):
                     if search_min[2] < pos[2] < search_max[2]:
                         grasp_nearby.append(grasp)
                         grasp_nearby_pos.append(pos)
+        # print('Grasp nearby: ')
+        # print(grasp_nearby)
 
+        # Get direction vectors for nearby grasps
+        dir_vec = []
+        vec_length = 2
+        for grasp in grasp_nearby:
+            quat = [grasp.orientation.x, grasp.orientation.y, grasp.orientation.z, grasp.orientation.z]
+            v = []
+            v.append(2 * (quat[0] * quat[2] - quat[3] * quat[1]))
+            v.append(2 * (quat[1] * quat[2] + quat[3] * quat[0]))
+            v.append(1 - 2 * (quat[0] * quat[0] + quat[1] * quat[1]))
+            v = [x * vec_length for x in v]
+            dir_vec.append(v)
+        # print('Dir vectors: ')
+        # print(dir_vec)
+
+        # Create and vizualize direction vectors
+        viz_grasp_dir = o3d.geometry.LineSet()
+        lines_to_viz = []
+        points_to_viz = []
+        end_points = []
+        for i, point in enumerate(grasp_nearby_pos):
+            point2 = [point[x] + dir_vec[i][x] for x in range(3)]
+            end_points.append(point2)
+            points_to_viz.append(point)
+            points_to_viz.append(point2)
+            lines_to_viz.append([0 + 2 * i, 1 + 2 * i])
+
+        colors = [[1, 0, 0] for i in range(len(lines_to_viz))]
+        viz_grasp_dir.points = o3d.utility.Vector3dVector(points_to_viz)
+        viz_grasp_dir.lines = o3d.utility.Vector2iVector(lines_to_viz)
+        viz_grasp_dir.colors = o3d.utility.Vector3dVector(colors)
+
+        # Visualize grasp points
+        viz_grasp_points = viz_color_pointcloud(grasp_nearby_pos, color=[0, 0, 1])
+
+        # Check which grasps point at desired object/affordance
+        steps = 10
+        interpol_points = []
+        for point, end_point in zip(grasp_nearby_pos, end_points):
+            interpol = []
+            x_diff = (point[0] - end_point[0]) / steps
+            y_diff = (point[1] - end_point[1]) / steps
+            z_diff = (point[2] - end_point[2]) / steps
+            for i in range(1, steps + 1):
+                interpol.append([point[0] - x_diff * i, point[1] - y_diff * i, point[2] - z_diff * i])
+            interpol_points.append(interpol)
+        # print('Interpolation points: ')
+        # print(interpol_points)
+
+        good_grasp = []
+        interpol_viz_true = []
+        interpol_viz_false = []
+        for i, point_list in enumerate(interpol_points):
+            grasp_intersects = False
+            for point in point_list:
+                if point_min[0] < point[0] < point_max[0] and point_min[1] < point[1] < point_max[1] and point_min[2] < point[2] < point_max[2]:
+                    grasp_intersects = True
+                    interpol_viz_true.append(point)
+                else:
+                    interpol_viz_false.append(point)
+            if grasp_intersects:
+                good_grasp.append(grasp_nearby[i])
+
+        print('Good grasps: ')
+        print(good_grasp)
+
+        # Visualize points from grasp contained in bbox
+        viz_interpol_true = viz_color_pointcloud(interpol_viz_true, color=[0, 1, 0])
+        # Visualize points from grasp not contained in bbox
+        viz_interpol_false = viz_color_pointcloud(interpol_viz_false, color=[1, 0, 0])
+
+        # Visualize
+        o3d.visualization.draw_geometries([viz_cloud, bbox_cloud, bbox_search, viz_grasp_dir, viz_grasp_points, viz_interpol_true, viz_interpol_false])
 
         print('ok')
         exit()
