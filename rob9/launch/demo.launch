@@ -8,7 +8,7 @@
 
 
   <!-- <node name="start_ptu" pkg="ptu" type="start_ptu.py" required="true"/> -->
-  <node name="realsense_service" pkg="realsense_service" type="server.py" required="false"/>
+  <!-- <node name="realsense_service" pkg="realsense_service" type="server.py" required="false"/> -->
 
   <!-- <node name="move_to_goal" pkg="moveit_scripts" type="move_to_goal.py" output="screen"/>-->
   <node name="frame_publisher" pkg="moveit_scripts" type="frame_publisher.py"/>
