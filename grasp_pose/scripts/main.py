@@ -101,6 +101,18 @@ def calculate_delta_orientation(graspWorld, eeWorld):
     return deltaRPY
 
 
+# Merge list of masks, return as one greyscale image mask
+def merge_masks(masks):
+    # loop here for all objects
+    h, w, c = masks[0].shape
+    mask_full = np.full((h, w, c), (0, 0, 0), dtype=np.uint8)
+    for mask in masks:
+        mask_full = cv2.add(mask_full, mask)
+
+    mask_grey = cv2.cvtColor(mask_full, cv2.COLOR_BGR2GRAY)
+    return mask_grey
+
+
 def main(demo):
     global new_grasps, grasp_data
     if not rospy.is_shutdown():
