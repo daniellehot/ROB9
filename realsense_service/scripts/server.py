@@ -5,7 +5,8 @@ from realsense_service.srv import intrinsics, intrinsicsResponse
 from realsense_service.srv import capture, captureResponse
 from realsense_service.srv import depth, depthResponse
 from realsense_service.srv import rgb, rgbResponse
-from std_msgs.msg import Header, Float32MultiArray
+from realsense_service.srv import uvSrv, uvSrvResponse
+from std_msgs.msg import Header, Float32MultiArray, MultiArrayLayout, MultiArrayDimension
 from sensor_msgs.msg import Image, PointCloud2, PointField
 import sensor_msgs.point_cloud2 as pc2
 import rospy
@@ -62,7 +63,8 @@ class Realsense(object):
         self.pubStaticRGB = rospy.Publisher("/sensors/realsense/rgb/static", Image, queue_size=1)
         self.pubStaticDepth = rospy.Publisher("sensors/realsense/depth/static", Image, queue_size = 1)
         self.pubPointCloudGeometryStaticRGB = rospy.Publisher('/sensors/realsense/pointcloudGeometry/static/rgb', Float32MultiArray, queue_size=1)
-        #self.pubPointCloudGeometryStaticIndex = rospy.Publisher('/sensors/realsense/pointcloudGeometry/static/index', Float32MultiArray, queue_size=1)
+        #self.pubPointCloudStaticUV = rospy.Publisher('/sensors/realsense/pointcloudGeometry/static/uv', Float32MultiArray, queue_size=1)
+        self.serviceUVStatic = rospy.Service('/sensors/realsense/pointcloudGeometry/static/uv', uvSrv, self.serviceUVStatic)
         self.rate = rospy.Rate(6)
 
         # Initialize realsense package
@@ -179,11 +181,38 @@ class Realsense(object):
 
     def serviceSendDepthImageStatic(self, command):
         br = CvBridge()
+        print(self.depthImageStatic)
+        print(self.depthImageStatic.shape)
         return br.cv2_to_imgmsg(self.depthImageStatic)
 
     def serviceSendRGBImageStatic(self, command):
         br = CvBridge()
         return br.cv2_to_imgmsg(self.colorImageStatic)
+
+    def serviceUVStatic(self, command):
+
+        uvDim1 = MultiArrayDimension()
+        uvDim1.label = "length"
+        uvDim1.size = int(self.uvStatic.shape[0] * self.uvStatic.shape[1])
+        uvDim1.stride = self.uvStatic.shape[0]
+
+        uvDim2 = MultiArrayDimension()
+        uvDim2.label = "pair"
+        uvDim2.size = self.uvStatic.shape[1]
+        uvDim2.stride = self.uvStatic.shape[1]
+
+        uvLayout = MultiArrayLayout()
+        uvLayout.dim.append(uvDim1)
+        uvLayout.dim.append(uvDim2)
+
+        uvMsg = Float32MultiArray()
+        uvMsg.data = self.uvStatic.flatten().tolist()
+        uvMsg.layout = uvLayout
+
+        msg = uvSrvResponse()
+        msg.uv = uvMsg
+        return msg
+
 
     def updateStatic(self, capture):
         """ Sets static information to latest images and point clouds captured """
