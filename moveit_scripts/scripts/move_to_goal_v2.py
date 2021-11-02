@@ -87,15 +87,32 @@ def move_to_goal(poses_msg):
         poses_list = [waypoint_msg, goal_msg]
 
         success_flag, plan = compute_trajectory(poses_list)
+
         if success_flag==True:
-            print("Found a valid plan. Executing")
-            #rospy.sleep(3.)
-            move_group.execute(plan, wait=True)
-            move_group.stop()
-            move_group.clear_pose_targets()
-            #rospy.sleep(3.)
-            move_to_ready()
-            break
+
+            print("Found a valid plan")
+            if isinstance(plan, list):
+                print("Executing a joint trajectory")
+                #rospy.sleep(3.)
+                for i in range(2):
+                    if i==1:
+                        current_state = robot.get_current_state()
+                        #print("move_to_goal state " + str(current_state))
+                    move_group.execute(plan[i], wait=True)
+                    move_group.stop()
+                    move_group.clear_pose_targets()
+                #rospy.sleep(3.)
+                move_to_ready()
+                break
+            else:
+                print("Executing a cartesian trajectory")
+                #rospy.sleep(3.)
+                move_group.execute(plan, wait=True)
+                move_group.stop()
+                move_group.clear_pose_targets()
+                #rospy.sleep(3.)
+                move_to_ready()
+                break
         else:
             if i == len(poses_msg.poses):
                 print("None of the suggested grasps were valid")
@@ -103,6 +120,7 @@ def move_to_goal(poses_msg):
             continue
 
 def compute_trajectory(poses_list):
+    success_flag = False
     print("Computing a cartesian trajectory")
     # compute cartesian trajectory
     start_pose = geometry_msgs.msg.Pose()
@@ -123,7 +141,6 @@ def compute_trajectory(poses_list):
         send_trajectory_to_rviz(plan)
         success_flag = True
     else:
-        success_flag = False
         print("Computing a joint trajectory to the waypoint")
         success_flag_waypoint, plan_waypoint = compute_start_to_waypoint(waypoint_pose)
         if success_flag_waypoint == True:
@@ -133,6 +150,7 @@ def compute_trajectory(poses_list):
                 print("Waypoint plan lenght is " + str(len(plan_waypoint.joint_trajectory.points)) )
                 print("Goal plan lenght is " + str(len(plan_goal.joint_trajectory.points)) )
                 success_flag = True
+                plan = [plan_waypoint, plan_goal]
 
     return success_flag, plan
 
@@ -148,7 +166,7 @@ def compute_start_to_waypoint(waypoint_pose):
         if length == 0:
             length = 9999
         plan_length.append(length)
-
+        """
         if i == 4:
             counter = 0
             for j in range (5):
@@ -157,6 +175,7 @@ def compute_start_to_waypoint(waypoint_pose):
             if counter == 5:
                 print("Quitting planning, the first five attempts failed")
                 break
+        """
 
     min_index = plan_length.index(min(plan_length))
     plan = plan_list[min_index]
@@ -176,7 +195,7 @@ def compute_waypoint_to_goal(waypoint_pose, goal_pose):
     start_state = moveit_msgs.msg.RobotState()
     start_state = get_ik(waypoint_pose, current_state)
     move_group.set_start_state(start_state)
-
+    #print("compute_waypoint_to_goal state " + str(start_state))
     move_group.set_pose_target(goal_pose)
     plan_list = []
     plan_length = []
@@ -188,7 +207,7 @@ def compute_waypoint_to_goal(waypoint_pose, goal_pose):
         if length == 0:
             length = 9999
         plan_length.append(length)
-
+        """
         if i == 4:
             counter = 0
             for j in range (5):
@@ -197,6 +216,7 @@ def compute_waypoint_to_goal(waypoint_pose, goal_pose):
             if counter == 5:
                 print("Quitting planning, the first five attempts failed")
                 break
+        """
 
     #print("Plan lengths " + str(plan_length))
     min_index = plan_length.index(min(plan_length))
@@ -209,6 +229,8 @@ def compute_waypoint_to_goal(waypoint_pose, goal_pose):
         send_trajectory_to_rviz(plan)
         success_flag = True
 
+    #move_group.set_start_state(current_state)
+    move_group.set_start_state_to_current_state()
     return success_flag, plan
 
 
@@ -254,12 +276,14 @@ if __name__ == '__main__':
     print "goal_position_tolerance", goal_position_tolerance
     """
     move_group.allow_replanning(True)
-    move_group.set_max_acceleration_scaling_factor(0.5)
-    move_group.set_max_velocity_scaling_factor(0.5)
-    #move_group.set_planning_time(0.5)
-    #move_group.set_num_planning_attempts(25)
-    move_group.set_goal_orientation_tolerance(0.01)
-    move_group.set_goal_position_tolerance(0.01)
+    #move_group.set_max_acceleration_scaling_factor(0.5)
+    #move_group.set_max_velocity_scaling_factor(0.5)
+    move_group.set_planning_time(0.5)
+    #move_group.set_num_planning_attempts(50)
+    #move_group.set_goal_orientation_tolerance(0.01)
+    #move_group.set_goal_position_tolerance(0.01)
+    #move_group.set_goal_joint_tolerance(0.02)
+
 
     display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
                                                    moveit_msgs.msg.DisplayTrajectory,

@@ -100,7 +100,7 @@ def calculate_delta_orientation(graspWorld, eeWorld):
         -eeWorld.transform.rotation.w)
 
     deltaQuaternion = quaternion_multiply(graspWorldQuaternion, eeWorldQuaternionInv)
-    deltaRPY = np.asarray(euler_from_quaternion(qr)) * 180 / math.pi
+    deltaRPY = np.asarray(euler_from_quaternion(deltaQuaternion)) * 180 / math.pi
     return deltaRPY
 
 
@@ -211,6 +211,16 @@ def main(demo):
         if len(grasps) == 0 or len(waypoints) == 0:
             print("Could not find grasp with appropriate angle")
         else:
+            eeWorld=tf_buffer.lookup_transform("world", "right_ee_link", rospy.Time.now(), rospy.Duration(1.0))
+            weightedSums = []
+            for i in range(len(grasps)):
+                deltaRPY = abs(calculate_delta_orientation(grasps[i], eeWorld))
+                weightedSum = 0.2*deltaRPY[0]+0.4*deltaRPY[1]+0.4*deltaRPY[2]
+                weightedSums.append(weightedSum)
+            print ("weightedSums " + str(weightedSums))
+            weightedSums_sorted = sorted(weightedSums)
+            print ("weightedSums " + str(weightedSums))
+            print ("weightedSums_sorted " + str(weightedSums_sorted))
             # publish both the waypoint and the grasp to their own topics for visualisation
             #pub_waypoint.publish(waypoints[0])
             #pub_grasp.publish(grasps[0])
