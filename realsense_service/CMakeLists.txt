@@ -61,6 +61,7 @@ find_package(catkin REQUIRED COMPONENTS
    capture.srv
    depth.srv
    rgb.srv
+   uvSrv.srv
  )
 
 ## Generate actions in the 'action' folder

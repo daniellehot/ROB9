@@ -1,3 +1,5 @@
+
+
 # ROB9 docker images
 
 This folder contains all the docker image(s) produced for the ROB9 semester project
@@ -104,5 +106,5 @@ docker build --build-arg INCUBATOR_VER=$(date +%Y%m%d-%H%M%S) -t huchiewuchie/af
 ### C. Run the docker image
 
 ```
-docker run --name affordancenet -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix/:/tmp/.X11-unix --net=host --gpus all --rm affordancenet-rob9 /bin/bash
+docker run --name affordancenet -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix/:/tmp/.X11-unix --net=host --gpus all --rm huchiewuchie/affordancenet-rob9 /bin/bash
 ```
