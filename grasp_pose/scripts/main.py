@@ -217,10 +217,13 @@ def main(demo):
                 deltaRPY = abs(calculate_delta_orientation(grasps[i], eeWorld))
                 weightedSum = 0.2*deltaRPY[0]+0.4*deltaRPY[1]+0.4*deltaRPY[2]
                 weightedSums.append(weightedSum)
-            print ("weightedSums " + str(weightedSums))
+
             weightedSums_sorted = sorted(weightedSums)
-            print ("weightedSums " + str(weightedSums))
-            print ("weightedSums_sorted " + str(weightedSums_sorted))
+            grasps_sorted = [None]*len(grasps)
+            for i in range(len(weightedSums)):
+                num = weightedSums_sorted[i]
+                index=weightedSums.index(num)
+                grasps_sorted[i] = grasps[index]
             # publish both the waypoint and the grasp to their own topics for visualisation
             #pub_waypoint.publish(waypoints[0])
             #pub_grasp.publish(grasps[0])
