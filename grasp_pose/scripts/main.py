@@ -4,6 +4,7 @@ import rospy
 import std_msgs.msg
 from affordancenet_service.srv import *
 from realsense_service.srv import *
+from grasp_pose.srv import *
 import numpy as np
 import cv2
 from std_msgs.msg import Bool
@@ -104,19 +105,10 @@ def calculate_delta_orientation(graspWorld, eeWorld):
     return deltaRPY
 
 
-def main(demo):
+def handle_get_grasps(req):
+    print("handle_get_grasps")
     global new_grasps, grasp_data
     if not rospy.is_shutdown():
-        rospy.init_node('grasp_pose', anonymous=True)
-        tf_buffer = tf2_ros.Buffer()
-        tf_listener = tf2_ros.TransformListener(tf_buffer)
-
-        rospy.Subscriber("grasps", Path, grasp_callback)
-        pub_graspnet = rospy.Publisher('start_graspnet', Bool, queue_size=10)
-        pub_grasp = rospy.Publisher('pose_to_reach', PoseStamped, queue_size=10)
-        pub_poses = rospy.Publisher('poses_to_reach', PoseArray, queue_size=10)
-        pub_waypoint = rospy.Publisher('pose_to_reach_waypoint', PoseStamped, queue_size=10)
-        rate = rospy.Rate(5)
 
         # only capture a new scene at startup
         captureNewScene()
@@ -125,6 +117,7 @@ def main(demo):
         run_graspnet(pub_graspnet)
 
         new_grasps = False
+        rate = rospy.Rate(5)
         print('Waiting for grasps from graspnet...')
         while not new_grasps and not rospy.is_shutdown():
             rate.sleep()
@@ -132,7 +125,7 @@ def main(demo):
         # Evaluating the best grasp.
         world_frame = "world"
         ee_frame = "right_ee_link"
-        if demo:
+        if req.demo.data == True:
             camera_frame = "ptu_camera_color_optical_frame_real"
         else:
             camera_frame = "ptu_camera_color_optical_frame"
@@ -228,19 +221,22 @@ def main(demo):
             #pub_waypoint.publish(waypoints[0])
             #pub_grasp.publish(grasps[0])
             # now publish both as a single message for moveit
-            poses = geometry_msgs.msg.PoseArray()
-            poses.header.frame_id = grasps[0].header.frame_id
-            poses.header.stamp = rospy.Time.now()
+            grasps_msg = nav_msgs.msg.Path()
+            grasps_msg.header.frame_id = "world"
+            grasps_msg.header.stamp = rospy.Time.now()
             for i in range(len(grasps)):
-                poses.poses.append(waypoints[i].pose)
-                poses.poses.append(grasps[i].pose)
-            pub_poses.publish(poses)
-            print("Published poses")
+                grasps_msg.poses.append(waypoints[i])
+                #grasps_msg.poses[i].header.frame_id= "4"
+                grasps_msg.poses.append(grasps[i])
+                #grasps_msg.poses[i].header.frame_id= "4"
+            print("Sent grasps")
+            return grasps_msg
+
+            #exit()
 
 
         # Affordance segmentation here
 
-        exit()
         """
         # Finding the grasp with the least angle difference
         eeWorld=tf_buffer.lookup_transform("world", "right_ee_link", rospy.Time.now(), rospy.Duration(1.0))
@@ -258,7 +254,22 @@ def main(demo):
         pub_grasp.publish(grasps[min_index])
         """
 
+
 if __name__ == "__main__":
+    rospy.init_node('grasp_pose', anonymous=True)
+    tf_buffer = tf2_ros.Buffer()
+    tf_listener = tf2_ros.TransformListener(tf_buffer)
+
+    rospy.Subscriber("grasps", Path, grasp_callback)
+    pub_graspnet = rospy.Publisher('start_graspnet', Bool, queue_size=10)
+    pub_grasp = rospy.Publisher('pose_to_reach', PoseStamped, queue_size=10)
+    pub_poses = rospy.Publisher('poses_to_reach', PoseArray, queue_size=10)
+    pub_waypoint = rospy.Publisher('pose_to_reach_waypoint', PoseStamped, queue_size=10)
+
+    grasp_server = rospy.Service('get_grasps', GetGrasps, handle_get_grasps)
+    print("grasps server is ready")
+    rospy.spin()
+    """
     demo = False
     if len(sys.argv) > 1:
         if sys.argv[1] == 'demo':
@@ -266,4 +277,4 @@ if __name__ == "__main__":
         else:
             print("Invalid input argument")
             exit()
-    main(demo)
+    """
