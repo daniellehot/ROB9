@@ -241,7 +241,7 @@ def main(demo):
         # Affordance segmentation here
 
         exit()
-
+        """
         # Finding the grasp with the least angle difference
         eeWorld=tf_buffer.lookup_transform("world", "right_ee_link", rospy.Time.now(), rospy.Duration(1.0))
 
@@ -256,6 +256,7 @@ def main(demo):
         minIndex = weightedSums.index(min(weightedSums))
         pub_waypoint.publish(waypoints[min_index])
         pub_grasp.publish(grasps[min_index])
+        """
 
 if __name__ == "__main__":
     demo = False
