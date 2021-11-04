@@ -225,10 +225,14 @@ def handle_get_grasps(req):
             grasps_msg.header.frame_id = "world"
             grasps_msg.header.stamp = rospy.Time.now()
             for i in range(len(grasps)):
+                if (i % 2) == 0:
+                    index = 2
+                else:
+                    index = 1
                 grasps_msg.poses.append(waypoints[i])
-                #grasps_msg.poses[i].header.frame_id= "4"
+                grasps_msg.poses[-1].header.frame_id= str(index)
                 grasps_msg.poses.append(grasps[i])
-                #grasps_msg.poses[i].header.frame_id= "4"
+                grasps_msg.poses[-1].header.frame_id= str(index)
             print("Sent grasps")
             return grasps_msg
 

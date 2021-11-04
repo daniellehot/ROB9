@@ -2,8 +2,6 @@
 import sys
 import copy
 import rospy
-from moveit_scripts.srv import *
-from moveit_scripts.msg import *
 import moveit_commander
 from moveit_commander.conversions import pose_to_list
 from moveit_msgs.srv import *
@@ -11,7 +9,6 @@ import moveit_msgs.msg
 from moveit_msgs.msg import PositionIKRequest, RobotState, MoveItErrorCodes
 import geometry_msgs.msg
 from geometry_msgs.msg import Pose, PoseStamped, PoseArray
-from nav_msgs.msg import Path
 # from geometry_msgs.msg import Pose
 import std_msgs.msg
 from std_msgs.msg import Int8
@@ -44,86 +41,87 @@ def get_ik(msg, current_robot_state):
         print("Service call failed: %s"%e)
 
 
-def transform_frame(req):
+def transform_frame(msg):
     print("Transforming message to the world frame")
-    transformed_path = nav_msgs.msg.Path()
-    transformed_path.header.frame_id = "world"
-    tf_buffer.lookup_transform(req.header.frame_id, 'world', rospy.Time.now(), rospy.Duration(1.0))
-    for i in range(len(req.poses)):
+    transformed_poses = geometry_msgs.msg.PoseArray()
+    transformed_poses.header.frame_id = "world"
+    tf_buffer.lookup_transform(msg.header.frame_id, 'world', rospy.Time.now(), rospy.Duration(1.0))
+    for i in range(len(msg.poses)):
         transformed_pose_msg = geometry_msgs.msg.PoseStamped()
         transformed_pose_msg = tf_buffer.transform(msg.pose[i], "world")
-        transformed_path.poses.append(transformed_pose_msg)
-        transformed_path.poses[-1].header.frame_id = req.poses[i].header.frame_id
-    transformed_path.header.stamp = rospy.Time.now()
-    return trasnformed_path
+        transformed_poses.poses.append(transformed_pose_msg.pose)
+    transformed_poses.header.stamp = rospy.Time.now()
+    move_to_goal(trasnformed_poses)
 
 
-def move_to_goal(path_msg):
-    robot_trajectories = []
-    trajectories_poses = []
-    print("move_to_goal")
-    id_list_duplicates = []
-    for i in range(len(path_msg.poses)):
-        id_list_duplicates.append(path_msg.poses[i].header.frame_id)
-    id_list = list(dict.fromkeys(id_list_duplicates))
-    print("id_list_duplicates " + str(id_list_duplicates))
-    print("id_list " + str(id_list))
+def move_to_ready():
+    print("Moving to ready")
+    move_group.set_named_target("ready")
+    plan = move_group.go(wait=True)
+    move_group.stop()
+    move_group.clear_pose_targets()
+    print("Done")
 
-    print("Sampling all the grasps into sub-lists according to their id")
-    for id in id_list:
-        poses_msg = geometry_msgs.msg.PoseArray()
-        poses_msg.header.frame_id = id
+def send_trajectory_to_rviz(plan):
+    print("Trajectory was sent to RViZ")
+    display_trajectory = moveit_msgs.msg.DisplayTrajectory()
+    display_trajectory.trajectory_start = robot.get_current_state()
+    display_trajectory.trajectory.append(plan)
+    display_trajectory_publisher.publish(display_trajectory)
 
-        for i in range(len(path_msg.poses)):
-            if path_msg.poses[i].header.frame_id == id:
-                poses_msg.poses.append(path_msg.poses[i].pose)
 
-        poses_msg.header.stamp = rospy.Time.now()
-        poses_length = len(poses_msg.poses)
-        #print("poses_msg " + str(poses_msg))
+def move_to_goal(poses_msg):
+    print("Validating received grasps")
+    poses_length = len(poses_msg.poses)
+    for i in range(0, len(poses_msg.poses), 2):
+        end_index = len(poses_msg.poses) - 2
+        waypoint_msg = geometry_msgs.msg.PoseStamped()
+        waypoint_msg.header.frame_id = poses_msg.header.frame_id
+        waypoint_msg.header.stamp = rospy.Time.now()
+        waypoint_msg.pose = poses_msg.poses[i]
+        pub_waypoint.publish(waypoint_msg)
 
-        for i in range(0, len(poses_msg.poses), 2):
-            print("Calculating the trajectories for id " + str(id))
-            end_index = poses_length - 2
-            waypoint_msg = geometry_msgs.msg.PoseStamped()
-            waypoint_msg.header.frame_id = path_msg.header.frame_id
-            waypoint_msg.header.stamp = rospy.Time.now()
-            waypoint_msg.pose = poses_msg.poses[i]
+        goal_msg = geometry_msgs.msg.PoseStamped()
+        goal_msg.header.frame_id = poses_msg.header.frame_id
+        goal_msg.header.stamp = rospy.Time.now()
+        goal_msg.pose = poses_msg.poses[i+1]
+        pub_grasp.publish(goal_msg)
+        poses_list = [waypoint_msg, goal_msg]
 
-            goal_msg = geometry_msgs.msg.PoseStamped()
-            goal_msg.header.frame_id = poses_msg.header.frame_id
-            goal_msg.header.stamp = rospy.Time.now()
-            goal_msg.pose = poses_msg.poses[i+1]
-            poses_list = [waypoint_msg, goal_msg]
+        success_flag, plan = compute_trajectory(poses_list)
 
-            success_flag, plan = compute_trajectory(poses_list)
+        if success_flag==True:
 
-            if success_flag==True:
-                print("Found a valid plan")
-                waypoint_msg.header.frame_id = id
-                goal_msg.header.frame_id = id
-                trajectories_poses.append(waypoint_msg)
-                trajectories_poses.append(goal_msg)
-                if isinstance(plan, list):
-                    plan[0].joint_trajectory.header.frame_id = id
-                    plan[1].joint_trajectory.header.frame_id = id
-                    robot_trajectories.append(plan[0])
-                    robot_trajectories.append(plan[1])
-                    break
-                else:
-                    plan.joint_trajectory.header.frame_id = id
-                    robot_trajectories.append(plan)
-                    break
+            print("Found a valid plan")
+            if isinstance(plan, list):
+                print("Executing a joint trajectory")
+                #rospy.sleep(3.)
+                for i in range(2):
+                    if i==1:
+                        current_state = robot.get_current_state()
+                        #print("move_to_goal state " + str(current_state))
+                    move_group.execute(plan[i], wait=True)
+                    move_group.stop()
+                    move_group.clear_pose_targets()
+                #rospy.sleep(3.)
+                move_to_ready()
+                break
             else:
-                if i == end_index:
-                    print("None of the suggested grasps were valid")
-                    plan = None
-                    robot_trajectories.append(plan)
-                else:
-                    print("poses_length " + str(poses_length) + " index i " + str(i))
-                    print("Cannot reach the suggested grasp. Will try different configuration")
+                print("Executing a cartesian trajectory")
+                #rospy.sleep(3.)
+                move_group.execute(plan, wait=True)
+                move_group.stop()
+                move_group.clear_pose_targets()
+                #rospy.sleep(3.)
+                move_to_ready()
+                break
+        else:
+            if i == end_index:
+                print("None of the suggested grasps were valid")
+            else:
+                print("poses_length " + str(poses_length) + " index i " + str(i))
+                print("Cannot reach the suggested grasp. Will try different configuration")
 
-    return trajectories_poses, robot_trajectories
 
 def compute_trajectory(poses_list):
     success_flag = False
@@ -144,7 +142,7 @@ def compute_trajectory(poses_list):
     print("Cartesian plan fraction " + str(fraction))
 
     if fraction == 1.0:
-        #send_trajectory_to_rviz(plan)
+        send_trajectory_to_rviz(plan)
         success_flag = True
     else:
         print("Computing a joint trajectory to the waypoint")
@@ -189,7 +187,7 @@ def compute_start_to_waypoint(waypoint_pose):
         plan = None
         success_flag = False
     else:
-        #send_trajectory_to_rviz(plan)
+        send_trajectory_to_rviz(plan)
         success_flag = True
 
     return success_flag, plan
@@ -232,7 +230,7 @@ def compute_waypoint_to_goal(waypoint_pose, goal_pose):
         plan = None
         success_flag = False
     else:
-        #send_trajectory_to_rviz(plan)
+        send_trajectory_to_rviz(plan)
         success_flag = True
 
     #move_group.set_start_state(current_state)
@@ -240,52 +238,80 @@ def compute_waypoint_to_goal(waypoint_pose, goal_pose):
     return success_flag, plan
 
 
-def handle_get_trajectories(req):
-    print("handle_get_trajectories")
-    response = GetTrajectoriesResponse()
-    response_trajectories = moveit_scripts.msg.RobotTrajectories()
-    response_poses = nav_msgs.msg.Path()
-    response_trajectories.header.frame_id = "world"
-    response_poses.header.frame_id = "world"
-    response_trajectories.header.stamp = rospy.Time.now()
-    response_poses.header.stamp = rospy.Time.now()
-
-    if req.grasps.header.frame_id != "world":
-        path = transform_frame(req.grasps)
-        trajectories_poses, robot_trajectories = move_to_goal(path)
+def callback(msg):
+    print("Callback")
+    #print(msg)
+    if msg.header.frame_id != "world":
+        transform_frame(msg)
     else:
-        trajectories_poses, robot_trajectories = move_to_goal(req.grasps)
+        move_to_goal(msg)
 
-    response_trajectories.trajectories = copy.deepcopy(robot_trajectories)
-    response_poses.poses = copy.deepcopy(trajectories_poses)
-
-    #for i in range(len(robot_trajectories)):
-        #response_trajectories.trajectories.append(robot_trajectories[i])
-
-    #for i in range(len(trajectories_poses)):
-        #response_poses.poses.append(trajectories_poses[i])
-
-    response.trajectories_poses = response_poses
-    response.trajectories = response_trajectories
-
-    return response
-
+def reset_callback(msg):
+    print("Reset callback")
+    if msg.data == 1:
+        global reset_gripper_msg, activate_gripper_msg, pinch_gripper_msg
+        move_group.set_named_target("ready")
+        plan = move_group.go(wait=True)
+        move_group.stop()
+        #gripper_pub.publish(reset_gripper_msg)
+        #gripper_pub.publish(activate_gripper_msg)
+        #gripper_pub.publish(pinch_gripper_msg)
+    else:
+        print("Invalid input")
 
 
 if __name__ == '__main__':
     rospy.init_node('moveit_subscriber', anonymous=True)
-
-    tf_buffer = tf2_ros.Buffer()
-    tf_listener = tf2_ros.TransformListener(tf_buffer)
+    rospy.Subscriber('poses_to_reach', PoseArray, callback)
+    rospy.Subscriber('reset_robot', Int8, reset_callback)
+    gripper_pub = rospy.Publisher('gripper_controller', Int8, queue_size=1)
+    pub_grasp = rospy.Publisher('pose_to_reach', PoseStamped, queue_size=10)
+    pub_waypoint = rospy.Publisher('pose_to_reach_waypoint', PoseStamped, queue_size=10)
 
     moveit_commander.roscpp_initialize(sys.argv)
     robot = moveit_commander.RobotCommander()
     move_group = moveit_commander.MoveGroupCommander("manipulator")
+    """
+    planning_time = move_group.get_planning_time()
+    goal_orientation_tolerance = move_group.get_goal_orientation_tolerance()
+    goal_position_tolerance = move_group.get_goal_position_tolerance()
+    print "planning_time", planning_time
+    print "goal orientation tolerance", goal_orientation_tolerance
+    print "goal_position_tolerance", goal_position_tolerance
+    """
     move_group.allow_replanning(True)
+    #move_group.set_max_acceleration_scaling_factor(0.5)
+    #move_group.set_max_velocity_scaling_factor(0.5)
     move_group.set_planning_time(0.1)
+    #move_group.set_num_planning_attempts(50)
+    #move_group.set_goal_orientation_tolerance(0.01)
+    #move_group.set_goal_position_tolerance(0.01)
+    #move_group.set_goal_joint_tolerance(0.02)
 
-    trajectory_server = rospy.Service('get_trajectories', GetTrajectories, handle_get_trajectories)
-    print("trajectory server is ready")
+
+    display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
+                                                   moveit_msgs.msg.DisplayTrajectory,
+                                                   queue_size=20)
+
+    tf_buffer = tf2_ros.Buffer()
+    tf_listener = tf2_ros.TransformListener(tf_buffer)
+
+    reset_gripper_msg = std_msgs.msg.Int8()
+    reset_gripper_msg.data = 0
+    activate_gripper_msg = std_msgs.msg.Int8()
+    activate_gripper_msg.data = 1
+    close_gripper_msg = std_msgs.msg.Int8()
+    close_gripper_msg = 2
+    open_gripper_msg = std_msgs.msg.Int8()
+    open_gripper_msg.data = 3
+    basic_gripper_msg = std_msgs.msg.Int8()
+    basic_gripper_msg.data = 4
+    pinch_gripper_msg = std_msgs.msg.Int8()
+    pinch_gripper_msg.data = 5
+
+    gripper_pub.publish(reset_gripper_msg)
+    gripper_pub.publish(activate_gripper_msg)
+    #gripper_pub.publish(pinch_gripper_msg)
 
     try:
         rospy.spin()

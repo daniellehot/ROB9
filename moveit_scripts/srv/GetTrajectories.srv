@@ -1,3 +1,4 @@
-std_msgs/Int8 id
+nav_msgs/Path grasps
 ---
-moveit_msgs/RobotTrajectory[] trajectories
+nav_msgs/Path trajectories_poses
+moveit_scripts/RobotTrajectories trajectories
