@@ -93,6 +93,7 @@ def move_to_goal(poses_msg):
         if success_flag==True:
 
             print("Found a valid plan")
+            rospy.sleep(10.)
             if isinstance(plan, list):
                 print("Executing a joint trajectory")
                 #rospy.sleep(3.)
@@ -103,7 +104,8 @@ def move_to_goal(poses_msg):
                     move_group.execute(plan[i], wait=True)
                     move_group.stop()
                     move_group.clear_pose_targets()
-                #rospy.sleep(3.)
+                gripper_pub.publish(pinch_gripper_msg)
+                rospy.sleep(3.)
                 move_to_ready()
                 break
             else:
@@ -112,7 +114,8 @@ def move_to_goal(poses_msg):
                 move_group.execute(plan, wait=True)
                 move_group.stop()
                 move_group.clear_pose_targets()
-                #rospy.sleep(3.)
+                gripper_pub.publish(pinch_gripper_msg)
+                rospy.sleep(3.)
                 move_to_ready()
                 break
         else:
@@ -141,7 +144,7 @@ def compute_trajectory(poses_list):
     (plan, fraction) = move_group.compute_cartesian_path(waypoints, 0.01, 0.0)
     print("Cartesian plan fraction " + str(fraction))
 
-    if fraction == 1.0:
+    if fraction == 1.1:
         send_trajectory_to_rviz(plan)
         success_flag = True
     else:
@@ -280,10 +283,10 @@ if __name__ == '__main__':
     print "goal_position_tolerance", goal_position_tolerance
     """
     move_group.allow_replanning(True)
-    #move_group.set_max_acceleration_scaling_factor(0.5)
-    #move_group.set_max_velocity_scaling_factor(0.5)
-    move_group.set_planning_time(0.1)
-    #move_group.set_num_planning_attempts(50)
+    move_group.set_max_acceleration_scaling_factor(0.2)
+    move_group.set_max_velocity_scaling_factor(0.2)
+    move_group.set_planning_time(0.25)
+    #move_group.set_num_planning_attempts(25)
     #move_group.set_goal_orientation_tolerance(0.01)
     #move_group.set_goal_position_tolerance(0.01)
     #move_group.set_goal_joint_tolerance(0.02)
@@ -311,7 +314,7 @@ if __name__ == '__main__':
 
     gripper_pub.publish(reset_gripper_msg)
     gripper_pub.publish(activate_gripper_msg)
-    #gripper_pub.publish(pinch_gripper_msg)
+    gripper_pub.publish(pinch_gripper_msg)
 
     try:
         rospy.spin()

@@ -72,17 +72,16 @@ def run_graspnet(pub):
 
 
 def transformFrame(tf_buffer, pose, orignalFrame, newFrame):
+    pose.header.stamp = rospy.Time.now()
     transformed_pose_msg = geometry_msgs.msg.PoseStamped()
-    tf_buffer.lookup_transform(orignalFrame, newFrame, rospy.Time.now(), rospy.Duration(1.0))
+    tf_buffer.lookup_transform(orignalFrame, newFrame, rospy.Time.now(), rospy.Duration(1))
     transformed_pose_msg = tf_buffer.transform(pose, newFrame)
     return transformed_pose_msg
 
 def cartesianToSpherical(x, y, z):
-
     polar = math.atan2(math.sqrt(x**2 + y**2), z)
     azimuth = math.atan2(y, x)
     r = math.sqrt(x**2 + y**2 + z**2)
-
     return r, polar, azimuth
 
 def calculate_delta_orientation(graspWorld, eeWorld):
@@ -117,6 +116,7 @@ def main(demo):
         pub_poses = rospy.Publisher('poses_to_reach', PoseArray, queue_size=10)
         pub_waypoint = rospy.Publisher('pose_to_reach_waypoint', PoseStamped, queue_size=10)
         rate = rospy.Rate(5)
+
 
         # only capture a new scene at startup
         captureNewScene()
