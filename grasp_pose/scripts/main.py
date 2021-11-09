@@ -207,7 +207,7 @@ def main(demo):
                     #rospy.sleep(1)
 
             i += 1
-
+            
         if len(grasps) == 0 or len(waypoints) == 0:
             print("Could not find grasp with appropriate angle")
         else:

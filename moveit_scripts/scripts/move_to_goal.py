@@ -60,6 +60,7 @@ def move_to_ready():
     plan = move_group.go(wait=True)
     move_group.stop()
     move_group.clear_pose_targets()
+    gripper_pub.publish(open_gripper_msg)
     print("Done")
 
 def send_trajectory_to_rviz(plan):
@@ -93,7 +94,7 @@ def move_to_goal(poses_msg):
         if success_flag==True:
 
             print("Found a valid plan")
-            rospy.sleep(10.)
+            rospy.sleep(4.)
             if isinstance(plan, list):
                 print("Executing a joint trajectory")
                 #rospy.sleep(3.)
@@ -104,8 +105,8 @@ def move_to_goal(poses_msg):
                     move_group.execute(plan[i], wait=True)
                     move_group.stop()
                     move_group.clear_pose_targets()
-                gripper_pub.publish(pinch_gripper_msg)
-                rospy.sleep(3.)
+                gripper_pub.publish(close_gripper_msg)
+                rospy.sleep(4.)
                 move_to_ready()
                 break
             else:
@@ -114,8 +115,8 @@ def move_to_goal(poses_msg):
                 move_group.execute(plan, wait=True)
                 move_group.stop()
                 move_group.clear_pose_targets()
-                gripper_pub.publish(pinch_gripper_msg)
-                rospy.sleep(3.)
+                gripper_pub.publish(close_gripper_msg)
+                rospy.sleep(4.)
                 move_to_ready()
                 break
         else:
@@ -283,10 +284,10 @@ if __name__ == '__main__':
     print "goal_position_tolerance", goal_position_tolerance
     """
     move_group.allow_replanning(True)
-    move_group.set_max_acceleration_scaling_factor(0.2)
-    move_group.set_max_velocity_scaling_factor(0.2)
-    move_group.set_planning_time(0.25)
-    #move_group.set_num_planning_attempts(25)
+    move_group.set_max_acceleration_scaling_factor(0.1)
+    move_group.set_max_velocity_scaling_factor(0.1)
+    move_group.set_planning_time(0.1)
+    move_group.set_num_planning_attempts(50)
     #move_group.set_goal_orientation_tolerance(0.01)
     #move_group.set_goal_position_tolerance(0.01)
     #move_group.set_goal_joint_tolerance(0.02)
@@ -304,7 +305,7 @@ if __name__ == '__main__':
     activate_gripper_msg = std_msgs.msg.Int8()
     activate_gripper_msg.data = 1
     close_gripper_msg = std_msgs.msg.Int8()
-    close_gripper_msg = 2
+    close_gripper_msg.data = 2
     open_gripper_msg = std_msgs.msg.Int8()
     open_gripper_msg.data = 3
     basic_gripper_msg = std_msgs.msg.Int8()
