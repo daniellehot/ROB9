@@ -353,11 +353,11 @@ def fuse_grasp_affordance(cloud_masked, grasps_data, visualize=False, search_dis
     for i, point_list in enumerate(interpol_points):
         grasp_intersects = False
         point_list = np.array(point_list)
-        indices = inside_cube_test(point_list, box_corners)
+        outside_bbox = inside_cube_test(point_list, box_corners)  # Returns point indecies outside box
 
         for idx in range(len(point_list)):
             in_bbox = True
-            for index in indices:
+            for index in outside_bbox:
                 if idx == index:
                     in_bbox = False
 
