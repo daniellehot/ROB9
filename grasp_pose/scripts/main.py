@@ -394,7 +394,7 @@ def qv_mult(q1, v1):
 def main(demo):
     global new_grasps, grasp_data, cloud
     save_data = False  # Should data be saved
-    live_run = False  # Are the full system running or are we using loaded data
+    live_run = True  # Are the full system running or are we using loaded data
 
     if not rospy.is_shutdown():
         rospy.init_node('grasp_pose', anonymous=True)
@@ -404,6 +404,7 @@ def main(demo):
         rospy.Subscriber("grasps", Path, grasp_callback)
         pub_graspnet = rospy.Publisher('start_graspnet', Bool, queue_size=10)
         pub_grasp = rospy.Publisher('pose_to_reach', PoseStamped, queue_size=10)
+        pub_poses = rospy.Publisher('poses_to_reach', PoseArray, queue_size=10)
         pub_waypoint = rospy.Publisher('pose_to_reach_waypoint', PoseStamped, queue_size=10)
         rate = rospy.Rate(5)
 
@@ -475,8 +476,6 @@ def main(demo):
         #print('Grasp data: ' + str(good_grasps_all))
 
 
-        exit()
-
         # Evaluating the best grasp.
         world_frame = "world"
         ee_frame = "right_ee_link"
@@ -485,12 +484,9 @@ def main(demo):
         else:
             camera_frame = "ptu_camera_color_optical_frame"
 
-        i, grasps, waypoints = 0, [], []
-        while True:
+        grasps, waypoints = [], []
+        for grasp in good_grasps_all:
 
-            if i >= len(graspData):
-                break
-            grasp = graspData[i]
             grasp.header.frame_id = camera_frame
 
             graspCamera = copy.deepcopy(grasp)
@@ -503,8 +499,8 @@ def main(demo):
                 graspCamera.pose.orientation.z,
                 graspCamera.pose.orientation.w)
 
-            rotMat = quaternion_matrix(quaternion)[:3,:3]
-            offset = np.array([[0.2], [0.0], [0.0]])
+            rotMat = quaternion_matrix(quaternion)[:3, :3]
+            offset = np.array([[0.15], [0.0], [0.0]])
             offset = np.transpose(np.matmul(rotMat, offset))[0]
 
             waypointCamera.pose.position.x += -offset[0]
@@ -525,15 +521,14 @@ def main(demo):
             r, polarAngle, azimuthAngle = cartesianToSpherical(x, y, z)
 
             # Evaluating angle limits
-            azimuthAngleLimit = [-0.5*math.pi, -0.25*math.pi]
-            polarAngleLimit = [0, 0.5*math.pi]
+            azimuthAngleLimit = [-0.5 * math.pi, -0.25 * math.pi]
+            polarAngleLimit = [0, 0.35 * math.pi]
 
-            azimuthAngleLimit = [-1*math.pi, 1*math.pi]
-            polarAngleLimit = [0, 0.5*math.pi]
+            # azimuthAngleLimit = [-1*math.pi, 1*math.pi]
+            # polarAngleLimit = [0, 0.5*math.pi]
 
             if azimuthAngle > azimuthAngleLimit[0] and azimuthAngle < azimuthAngleLimit[1]:
                 if polarAngle > polarAngleLimit[0] and polarAngle < polarAngleLimit[1]:
-
                     waypointWorld.header.stamp = rospy.Time.now()
                     waypointWorld.header.frame_id = world_frame
                     graspWorld.header.stamp = rospy.Time.now()
@@ -542,31 +537,51 @@ def main(demo):
                     waypoints.append(waypointWorld)
                     grasps.append(graspWorld)
 
-                    #pub_waypoint.publish(waypoints[-1])
-                    #pub_grasp.publish(grasps[-1])
-                    #rospy.sleep(1)
-
-            i += 1
+                    # pub_waypoint.publish(waypoints[-1])
+                    # pub_grasp.publish(grasps[-1])
+                    # rospy.sleep(1)
 
         if len(grasps) == 0 or len(waypoints) == 0:
             print("Could not find grasp with appropriate angle")
         else:
-            pub_waypoint.publish(waypoints[0])
-            pub_grasp.publish(grasps[0])
+            eeWorld = tf_buffer.lookup_transform("world", "right_ee_link", rospy.Time.now(), rospy.Duration(1.0))
+            weightedSums = []
+            for i in range(len(grasps)):
+                deltaRPY = abs(calculate_delta_orientation(grasps[i], eeWorld))
+                weightedSum = 0.2 * deltaRPY[0] + 0.4 * deltaRPY[1] + 0.4 * deltaRPY[2]
+                weightedSums.append(weightedSum)
+
+            weightedSums_sorted = sorted(weightedSums)
+            grasps_sorted = [None] * len(grasps)
+            for i in range(len(weightedSums)):
+                num = weightedSums_sorted[i]
+                index = weightedSums.index(num)
+                grasps_sorted[i] = grasps[index]
+            # publish both the waypoint and the grasp to their own topics for visualisation
+            # pub_waypoint.publish(waypoints[0])
+            # pub_grasp.publish(grasps[0])
+            # now publish both as a single message for moveit
+            poses = geometry_msgs.msg.PoseArray()
+            poses.header.frame_id = grasps[0].header.frame_id
+            poses.header.stamp = rospy.Time.now()
+            for i in range(len(grasps)):
+                poses.poses.append(waypoints[i].pose)
+                poses.poses.append(grasps[i].pose)
+            pub_poses.publish(poses)
+            print("Published poses")
 
         # Affordance segmentation here
 
         exit()
 
         # Finding the grasp with the least angle difference
-        eeWorld=tf_buffer.lookup_transform("world", "right_ee_link", rospy.Time.now(), rospy.Duration(1.0))
+        eeWorld = tf_buffer.lookup_transform("world", "right_ee_link", rospy.Time.now(), rospy.Duration(1.0))
 
         weightedSums = []
 
         for i in range(len(grasps)):
-
             deltaRPY = abs(calculate_delta_orientation(graspWorld, eeWorld))
-            weightedSum = 0.2*deltaRPY[0]+0.4*deltaRPY[1]+0.4*deltaRPY[2]
+            weightedSum = 0.2 * deltaRPY[0] + 0.4 * deltaRPY[1] + 0.4 * deltaRPY[2]
             weightedSums.append(weightedSum)
 
         minIndex = weightedSums.index(min(weightedSums))
