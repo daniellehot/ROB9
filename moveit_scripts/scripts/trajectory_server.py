@@ -142,6 +142,7 @@ def compute_trajectory(poses_list):
 
     (plan, fraction) = move_group.compute_cartesian_path(waypoints, 0.01, 0.0)
     print("Cartesian plan fraction " + str(fraction))
+    #fraction = 1.1
 
     if fraction == 1.0:
         #send_trajectory_to_rviz(plan)
@@ -282,7 +283,10 @@ if __name__ == '__main__':
     robot = moveit_commander.RobotCommander()
     move_group = moveit_commander.MoveGroupCommander("manipulator")
     move_group.allow_replanning(True)
+    move_group.set_max_acceleration_scaling_factor(0.1)
+    move_group.set_max_velocity_scaling_factor(0.1)
     move_group.set_planning_time(0.1)
+    move_group.set_num_planning_attempts(25)
 
     trajectory_server = rospy.Service('get_trajectories', GetTrajectories, handle_get_trajectories)
     print("trajectory server is ready")

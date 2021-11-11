@@ -157,7 +157,7 @@ def handle_get_grasps(req):
                 graspCamera.pose.orientation.w)
 
             rotMat = quaternion_matrix(quaternion)[:3,:3]
-            offset = np.array([[0.15], [0.0], [0.0]])
+            offset = np.array([[0.1], [0.0], [0.0]])
             offset = np.transpose(np.matmul(rotMat, offset))[0]
 
             waypointCamera.pose.position.x += -offset[0]
@@ -200,7 +200,7 @@ def handle_get_grasps(req):
                     #rospy.sleep(1)
 
             i += 1
-            
+
         if len(grasps) == 0 or len(waypoints) == 0:
             print("Could not find grasp with appropriate angle")
         else:
