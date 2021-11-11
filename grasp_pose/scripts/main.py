@@ -9,7 +9,7 @@ import cv2
 from std_msgs.msg import Bool
 from nav_msgs.msg import Path
 import geometry_msgs.msg
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, PoseArray
 from geometry_msgs.msg import Pose
 import tf2_ros
 import tf2_geometry_msgs
@@ -177,19 +177,31 @@ def convertCloudFromRosToOpen3d(ros_cloud):
 # Merge list of masks, return as one greyscale image mask
 def merge_subtract_masks(masks, ids=[], visualize=False):
     # loop here for all objects
-    h, w, c = masks[0].shape
-    mask_full = np.full((h, w, c), (0, 0, 0), dtype=np.uint8)
-    for i in range(1, len(masks)):
-        mask_full = cv2.add(mask_full, masks[i])
 
-    mask_grey = cv2.cvtColor(mask_full, cv2.COLOR_BGR2GRAY)
+    mask_full = np.zeros((masks.shape[1], masks.shape[2])).astype(np.uint8)
+    for i in range(1, masks.shape[0]):
+        if i in ids:
+            print(masks[i].min(), masks[i].max())
+            kernel = np.ones((21,21), np.uint8)
+            m = np.zeros((masks.shape[1], masks.shape[2])).astype(np.uint8)
+            m[masks[i] > 50] = masks[i, masks[i] > 50]
+            m = cv2.erode(m, kernel)
+            mask_full[m > 0] = m[m>0]
+            print(i)
+            cv2.imshow('Mask', masks[i])
+            cv2.waitKey(0)
 
-    for i in ids:
-        mask_to_subtract = cv2.cvtColor(masks[i], cv2.COLOR_BGR2GRAY)
-        mask_grey = cv2.subtract(mask_grey, mask_to_subtract)
+        #masks_full[masks[i] != 0]
+
+    #mask_grey = cv2.cvtColor(mask_full, cv2.COLOR_BGR2GRAY)
+    mask_grey = mask_full
+
+    #for i in ids:
+    #    mask_to_subtract = masks[i]
+    #    mask_grey = cv2.subtract(mask_grey, mask_to_subtract)
 
     if visualize:
-        cv2.imshow('Mask', mask_full)
+        cv2.imshow('Mask', mask_grey)
         cv2.waitKey(0)
 
     return mask_grey
@@ -456,7 +468,7 @@ def main(demo):
         good_grasps_all = []
         for obj_idx, mask in enumerate(masks):
             # Merge masks and subtract unwanted masks
-            mask_ids_to_subtract = []
+            mask_ids_to_subtract = [1, 2, 6, 7, 8]
             mask_full = merge_subtract_masks(mask, mask_ids_to_subtract, visualize=False)
 
             # Loop cloud indexes in mask and extract masked pointcloud
@@ -465,7 +477,7 @@ def main(demo):
                 if mask_full[idx[0]][idx[1]] != 0:
                     cloud_masked.append(cloud[count])
 
-            good_grasps = fuse_grasp_affordance(cloud_masked, graspData, visualize=True)
+            good_grasps = fuse_grasp_affordance(cloud_masked, graspData, visualize=False)
             # Set frame_id to object_id
             for grasp in good_grasps:
                 grasp.header.frame_id = str(objects[obj_idx])
@@ -521,8 +533,8 @@ def main(demo):
             r, polarAngle, azimuthAngle = cartesianToSpherical(x, y, z)
 
             # Evaluating angle limits
-            azimuthAngleLimit = [-0.5 * math.pi, -0.25 * math.pi]
-            polarAngleLimit = [0, 0.35 * math.pi]
+            azimuthAngleLimit = [-1. * math.pi, 1.0 * math.pi]
+            polarAngleLimit = [0, 1. * math.pi]
 
             # azimuthAngleLimit = [-1*math.pi, 1*math.pi]
             # polarAngleLimit = [0, 0.5*math.pi]
@@ -544,6 +556,7 @@ def main(demo):
         if len(grasps) == 0 or len(waypoints) == 0:
             print("Could not find grasp with appropriate angle")
         else:
+            """
             eeWorld = tf_buffer.lookup_transform("world", "right_ee_link", rospy.Time.now(), rospy.Duration(1.0))
             weightedSums = []
             for i in range(len(grasps)):
@@ -561,6 +574,7 @@ def main(demo):
             # pub_waypoint.publish(waypoints[0])
             # pub_grasp.publish(grasps[0])
             # now publish both as a single message for moveit
+            """
             poses = geometry_msgs.msg.PoseArray()
             poses.header.frame_id = grasps[0].header.frame_id
             poses.header.stamp = rospy.Time.now()
