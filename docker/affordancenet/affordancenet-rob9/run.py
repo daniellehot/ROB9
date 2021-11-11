@@ -20,7 +20,7 @@ import rospy
 
 import caffe
 
-CONF_THRESHOLD = 0.9
+CONF_THRESHOLD = 0.7
 good_range = 0.005
 
 # get current dir
@@ -264,6 +264,10 @@ def run_affordance_net(net, im):
 
     inds = np.where(rois_class_score[:, -1] >= CONF_THRESHOLD)[0]
     # get mask
+    print(inds)
+    print(rois_final.shape)
+    rois_final = rois_final[inds]
+    rois_class_ind = rois_class_ind[inds]
     masks = masks[inds, :, :, :]
     masks = masks * 255
     num_boxes = rois_final.shape[0]

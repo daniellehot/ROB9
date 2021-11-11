@@ -7,31 +7,20 @@ from realsense_service.srv import *
 from grasp_pose.srv import *
 import numpy as np
 import cv2
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, Float32MultiArray
 from nav_msgs.msg import Path
-from std_msgs.msg import Float32MultiArray
 import geometry_msgs.msg
 from geometry_msgs.msg import PoseStamped, Pose, PoseArray
-# from geometry_msgs.msg import Pose
 import tf2_ros
 import tf2_geometry_msgs
 import tf_conversions
-import tf2_ros
 from tf.transformations import euler_from_quaternion, quaternion_from_euler, quaternion_matrix, quaternion_multiply
 import copy
 import math
 from sensor_msgs.msg import PointCloud2
 import sensor_msgs.point_cloud2 as pc2
-
-
-def captureNewScene():
-    rospy.wait_for_service("/sensors/realsense/capture")
-    captureService = rospy.ServiceProxy("/sensors/realsense/capture", capture)
-    msg = capture()
-    msg.data = True
-    response = captureService(msg)
-    print(response)
-
+from cameraService import *
+from cameraService.cameraClient import CameraClient
 
 def getAffordanceResult():
     rospy.wait_for_service("/affordanceNet/result")
@@ -105,13 +94,13 @@ def calculate_delta_orientation(graspWorld, eeWorld):
 
 
 def handle_get_grasps(req):
-    print("handle_get_grasps")
     global new_grasps, grasp_data
+
     if not rospy.is_shutdown():
 
-
         # only capture a new scene at startup
-        captureNewScene()
+        cam = CameraClient()
+        cam.captureNewScene()
 
         #make graspnet run on images from realsense
         run_graspnet(pub_graspnet)
@@ -132,9 +121,11 @@ def handle_get_grasps(req):
 
         graspData = []
 
+        ## Thresholding the grasps according to graspnet score
+        THRESHOLD = 0.1
         for i in range(len(grasp_data.poses)):
             grasp = grasp_data.poses[i]
-            if float(grasp.header.frame_id) > 0.2:
+            if float(grasp.header.frame_id) > THRESHOLD:
                 graspData.append(grasp)
 
 
@@ -178,7 +169,7 @@ def handle_get_grasps(req):
             r, polarAngle, azimuthAngle = cartesianToSpherical(x, y, z)
 
             # Evaluating angle limits
-            azimuthAngleLimit = [-0.5*math.pi, -0.25*math.pi]
+            azimuthAngleLimit = [-1*math.pi, 1*math.pi]
             polarAngleLimit = [0, 0.35*math.pi]
 
             #azimuthAngleLimit = [-1*math.pi, 1*math.pi]
@@ -200,7 +191,7 @@ def handle_get_grasps(req):
                     #rospy.sleep(1)
 
             i += 1
-            
+
         if len(grasps) == 0 or len(waypoints) == 0:
             print("Could not find grasp with appropriate angle")
         else:
@@ -260,7 +251,8 @@ def handle_get_grasps(req):
 
 
 if __name__ == "__main__":
-    rospy.init_node('grasp_pose', anonymous=True)
+
+    rospy.init_node('grasp_affordance_association', anonymous=False)
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
 
