@@ -5,8 +5,10 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /MotionPlanning1/Planning Request1
+        - /TF1
+        - /TF1/Frames1
       Splitter Ratio: 0.7425600290298462
-    Tree Height: 146
+    Tree Height: 169
   - Class: rviz/Help
     Name: Help
   - Class: rviz/Views
@@ -627,10 +629,6 @@ Visualization Manager:
           Value: false
         forearm_link:
           Value: false
-        goal_to_reach:
-          Value: true
-        grasp_to_reach:
-          Value: true
         gripper_connector_box:
           Value: false
         left_link:
@@ -644,8 +642,6 @@ Visualization Manager:
         ptu_camera_color_frame:
           Value: false
         ptu_camera_color_optical_frame:
-          Value: true
-        ptu_camera_color_optical_frame_real:
           Value: true
         ptu_camera_depth_frame:
           Value: false
@@ -679,14 +675,14 @@ Visualization Manager:
           Value: false
         tool0:
           Value: false
+        tool0_controller:
+          Value: false
         torso:
           Value: false
         torso_link:
           Value: false
         upper_arm_link:
           Value: false
-        waypoint_to_reach:
-          Value: true
         world:
           Value: true
         wrist_1_link:
@@ -702,12 +698,6 @@ Visualization Manager:
       Show Names: false
       Tree:
         world:
-          goal_to_reach:
-            {}
-          grasp_to_reach:
-            {}
-          ptu_camera_color_optical_frame_real:
-            {}
           table:
             ptu_base:
               ptu_pan:
@@ -736,7 +726,8 @@ Visualization Manager:
                 right_link:
                   base_link:
                     base:
-                      {}
+                      tool0_controller:
+                        {}
                     base_link_inertia:
                       shoulder_link:
                         upper_arm_link:
@@ -771,9 +762,35 @@ Visualization Manager:
                                             {}
                                     tool0:
                                       {}
-          waypoint_to_reach:
-            {}
       Update Interval: 0
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Min Color: 0; 0; 0
+      Name: PointCloud2
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.0010000000474974513
+      Style: Flat Squares
+      Topic: /sensors/realsense/pointcloudGeometry/static
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
       Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
@@ -791,34 +808,6 @@ Visualization Manager:
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
-      Name: PointCloud2
-      Position Transformer: XYZ
-      Queue Size: 10
-      Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.0010000000474974513
-      Style: Flat Squares
-      Topic: /sensors/realsense/pointcloudGeometry/static
-      Unreliable: false
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: false
-    - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
-        Value: true
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz/PointCloud2
-      Color: 255; 255; 255
-      Color Transformer: Intensity
-      Decay Time: 0
-      Enabled: true
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Min Color: 0; 0; 0
       Name: PointCloud2_demo
       Position Transformer: XYZ
       Queue Size: 10
@@ -830,7 +819,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -847,7 +836,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 2.8588924407958984
+      Distance: 3.021472454071045
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -862,10 +851,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.28479668498039246
+      Pitch: 0.8997962474822998
       Target Frame: world
       Value: XYOrbit (rviz)
-      Yaw: 1.9135538339614868
+      Yaw: 3.378554105758667
     Saved: ~
 Window Geometry:
   Displays:
@@ -879,9 +868,9 @@ Window Geometry:
     collapsed: false
   MotionPlanning - Trajectory Slider:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd00000001000000000000024e00000363fc0200000007fb000000100044006900730070006c00610079007301000000470000012e000000f100fffffffb0000000800480065006c00700000000342000000bb0000008400fffffffb0000000a0056006900650077007300000001d0000000b0000000c200fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e00670100000374000001890000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c0069006400650072000000023f000000410000001900000019fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067010000017c0000022e000001bd00ffffff0000052b0000036300000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000001000000000000024e00000387fc0200000007fb000000100044006900730070006c00610079007301000000270000013b000000c900fffffffb0000000800480065006c00700000000342000000bb0000006e00fffffffb0000000a0056006900650077007300000001d0000000b0000000a400fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e00670100000374000001890000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c0069006400650072000000023f000000410000001600000016fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670100000168000002460000017d00ffffff000004eb0000038700000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Views:
     collapsed: false
-  Width: 1920
-  X: 0
+  Width: 1855
+  X: 65
   Y: 34

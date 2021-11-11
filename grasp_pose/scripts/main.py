@@ -73,17 +73,16 @@ def run_graspnet(pub):
 
 
 def transformFrame(tf_buffer, pose, orignalFrame, newFrame):
+    pose.header.stamp = rospy.Time.now()
     transformed_pose_msg = geometry_msgs.msg.PoseStamped()
-    tf_buffer.lookup_transform(orignalFrame, newFrame, rospy.Time.now(), rospy.Duration(1.0))
+    tf_buffer.lookup_transform(orignalFrame, newFrame, rospy.Time.now(), rospy.Duration(1))
     transformed_pose_msg = tf_buffer.transform(pose, newFrame)
     return transformed_pose_msg
 
 def cartesianToSpherical(x, y, z):
-
     polar = math.atan2(math.sqrt(x**2 + y**2), z)
     azimuth = math.atan2(y, x)
     r = math.sqrt(x**2 + y**2 + z**2)
-
     return r, polar, azimuth
 
 def calculate_delta_orientation(graspWorld, eeWorld):
@@ -109,6 +108,7 @@ def handle_get_grasps(req):
     print("handle_get_grasps")
     global new_grasps, grasp_data
     if not rospy.is_shutdown():
+
 
         # only capture a new scene at startup
         captureNewScene()
@@ -200,7 +200,7 @@ def handle_get_grasps(req):
                     #rospy.sleep(1)
 
             i += 1
-
+            
         if len(grasps) == 0 or len(waypoints) == 0:
             print("Could not find grasp with appropriate angle")
         else:

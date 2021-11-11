@@ -25,14 +25,14 @@
 
   <node name="start_ptu" pkg="ptu" type="start_ptu.py" required="true"/>
 
-  <node name="realsense_service" pkg="realsense_service" type="server.py" required="false" output="screen"/>
+  <!-- <node name="realsense_service" pkg="realsense_service" type="server.py" required="false" output="screen"/> -->
 
   <include file="$(find our_moveit_config)/launch/move_group.launch"/>
   <include file="$(find our_moveit_config)/launch/moveit_rviz.launch">
     <arg name="rviz_config" value="$(find our_moveit_config)/launch/moveit.rviz"/>
   </include>
   <!--<remap from="right_scaled_vel_traj_controller/follow_joint_trajectory" to="/right_arm/right_scaled_vel_traj_controller/follow_joint_trajectory"/>-->
-  <node name="move_to_goal" pkg="moveit_scripts" type="move_to_goal.py" output="screen"/>
+  <!-- <node name="move_to_goal" pkg="moveit_scripts" type="move_to_goal.py" output="screen"/> -->
   <node name="frame_publisher" pkg="moveit_scripts" type="frame_publisher.py" output="screen"/>
 
 

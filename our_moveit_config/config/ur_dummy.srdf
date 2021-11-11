@@ -72,6 +72,7 @@
     <disable_collisions link1="finger_1_link_0" link2="wrist_2_link" reason="Never" />
     <disable_collisions link1="finger_1_link_0" link2="wrist_3_link" reason="Never" />
     <disable_collisions link1="finger_1_link_1" link2="finger_1_link_2" reason="Adjacent" />
+    <disable_collisions link1="finger_1_link_1" link2="finger_1_link_3" reason="User" />
     <disable_collisions link1="finger_1_link_1" link2="finger_2_link_0" reason="Never" />
     <disable_collisions link1="finger_1_link_1" link2="finger_2_link_1" reason="Never" />
     <disable_collisions link1="finger_1_link_1" link2="finger_2_link_2" reason="Never" />
