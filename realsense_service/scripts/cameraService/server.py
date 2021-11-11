@@ -187,8 +187,6 @@ class RealsenseServer(object):
 
     def serviceSendDepthImageStatic(self, command):
         br = CvBridge()
-        print(self.depthImageStatic)
-        print(self.depthImageStatic.shape)
         return br.cv2_to_imgmsg(self.depthImageStatic)
 
     def serviceSendRGBImageStatic(self, command):
