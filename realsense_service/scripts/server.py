@@ -20,14 +20,15 @@ cam_width = 1280
 cam_height = 720
 
 
-class Realsense(object):
-    """docstring for Realsense."""
+class RealsenseServer(object):
+    """docstring for CameraServer."""
 
-    def __init__(self, cam_width, cam_height, tempFilterSize = 10):
+    def __init__(self, cam_width, cam_height, type="realsenseD435", tempFilterSize = 10):
 
         self.cam_width = cam_width
         self.cam_height = cam_height
         self.tempFilterSize = tempFilterSize
+        self.type = type
 
         # captured information variables initialized to 0 or empty
         self.color_frame = 0
@@ -53,18 +54,23 @@ class Realsense(object):
             PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
         ]
 
-        # Initialize ROS
-        rospy.init_node('realsense_service')
+        if self.type == "realsenseD435":
+            self.baseService = "/sensors/realsense"
+            self.nodeName = 'realsense_service'
+        else:
+            raise Exception("Invalid type")
 
-        self.serviceCapture = rospy.Service('/sensors/realsense/capture', capture, self.updateStatic)
-        self.serviceCaptureDepth = rospy.Service('/sensors/realsense/depth', depth, self.serviceSendDepthImageStatic)
-        self.serviceCaptureRGB = rospy.Service('/sensors/realsense/rgb', rgb, self.serviceSendRGBImageStatic)
-        self.pubPointCloudGeometryStatic = rospy.Publisher("/sensors/realsense/pointcloudGeometry/static", PointCloud2, queue_size=1)
-        self.pubStaticRGB = rospy.Publisher("/sensors/realsense/rgb/static", Image, queue_size=1)
-        self.pubStaticDepth = rospy.Publisher("sensors/realsense/depth/static", Image, queue_size = 1)
-        self.pubPointCloudGeometryStaticRGB = rospy.Publisher('/sensors/realsense/pointcloudGeometry/static/rgb', Float32MultiArray, queue_size=1)
-        #self.pubPointCloudStaticUV = rospy.Publisher('/sensors/realsense/pointcloudGeometry/static/uv', Float32MultiArray, queue_size=1)
-        self.serviceUVStatic = rospy.Service('/sensors/realsense/pointcloudGeometry/static/uv', uvSrv, self.serviceUVStatic)
+        # Initialize ROS
+        rospy.init_node(self.nodeName)
+
+        self.serviceCapture = rospy.Service(self.baseService + '/capture', capture, self.updateStatic)
+        self.serviceCaptureDepth = rospy.Service(self.baseService + '/depth', depth, self.serviceSendDepthImageStatic)
+        self.serviceCaptureRGB = rospy.Service(self.baseService + '/rgb', rgb, self.serviceSendRGBImageStatic)
+        self.pubPointCloudGeometryStatic = rospy.Publisher(self.baseService + "/pointcloudGeometry/static", PointCloud2, queue_size=1)
+        self.pubStaticRGB = rospy.Publisher(self.baseService + "/rgb/static", Image, queue_size=1)
+        self.pubStaticDepth = rospy.Publisher(self.baseService + "/depth/static", Image, queue_size = 1)
+        self.pubPointCloudGeometryStaticRGB = rospy.Publisher(self.baseService + "/pointcloudGeometry/static/rgb", Float32MultiArray, queue_size=1)
+        self.serviceUVStatic = rospy.Service(self.baseService + '/pointcloudGeometry/static/uv', uvSrv, self.serviceUVStatic)
         self.rate = rospy.Rate(6)
 
         # Initialize realsense package
@@ -234,7 +240,7 @@ class Realsense(object):
             return msg
 
 if __name__ == "__main__":
-    camera = Realsense(cam_width = cam_width, cam_height = cam_height, tempFilterSize=6)
+    camera = RealsenseServer(cam_width = cam_width, cam_height = cam_height, type="realsenseD435", tempFilterSize=6)
 
     # We will continuously update the dynamic images with the latest information
     # captured from realsense
