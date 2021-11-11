@@ -104,4 +104,27 @@
     <origin xyz="0 0 0" rpy="0 0 0" />
   </xacro:sensor_d435>
 
+  <link name="top_table">
+    <visual>
+      <geometry>
+        <box size="0.4 0.4 0.4345"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.0"/>
+      <material name="white"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.4 0.4 0.4345"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.0"/>
+    </collision>
+  </link>
+
+  <joint name="top_table_table_joint" type="fixed">
+    <parent link="table"/>
+    <child link="top_table"/>
+    <origin xyz="0 0 0.717" rpy="0 0 0"/>
+  </joint>
+
+
 </robot>
