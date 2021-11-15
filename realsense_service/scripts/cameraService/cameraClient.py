@@ -70,8 +70,8 @@ class CameraClient(object):
         """ Sets the self.uv to current static uv coordinates for translation
         from pixel coordinates to point cloud coordinates """
 
-        rospy.wait_for_service(serviceNameUV)
-        uvStaticService = rospy.ServiceProxy(serviceNameUV, uvSrv)
+        rospy.wait_for_service(self.serviceNameUV)
+        uvStaticService = rospy.ServiceProxy(self.serviceNameUV, uvSrv)
         msg = uvSrv()
 
         msg.data = True
@@ -87,12 +87,12 @@ class CameraClient(object):
         """ sets self.pointcloud to the current static point cloud with geometry
         only """
 
-        rospy.wait_for_service(serviceNamePointcloud)
-        pointcloudStaticService = rospy.ServiceProxy(serviceNamePointcloud, uvSrv)
+        rospy.wait_for_service(self.serviceNamePointcloud)
+        pointcloudStaticService = rospy.ServiceProxy(self.serviceNamePointcloud, pointcloud)
 
-        msg = pointcloudSrv()
+        msg = pointcloud()
         msg.data = True
-        reponse = pointcloudStaticService(msg)
+        response = pointcloudStaticService(msg)
 
         # Get cloud data from ros_cloud
         field_names = [field.name for field in response.pc.fields]
@@ -107,10 +107,3 @@ class CameraClient(object):
         xyz = np.array(xyz)
 
         return xyz
-
-    global cloud
-    print("Got pointcloud")
-    cloud = convertCloudFromRosToOpen3d(data)
-
-
-def convertCloudFromRosToOpen3d(ros_cloud):

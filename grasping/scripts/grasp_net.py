@@ -20,6 +20,7 @@ from std_msgs.msg import Header, Float32MultiArray
 from sensor_msgs.msg import PointCloud2, PointField
 import sensor_msgs.point_cloud2 as pc2
 import time
+from grasping.srv import startSrv, startSrvResponse
 
 ROOT_DIR = '/graspnet/graspnet-baseline/'  # path to graspnet-baseline
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
@@ -43,6 +44,15 @@ parser.add_argument('--score', help="Score threshold", type=float, default=0.0)
 
 cfgs = parser.parse_args()
 
+def startGraspnet(command):
+    global new_msg
+    print('Received message')
+    new_msg = True
+    msg = startSrvResponse()
+    msg.success.data = True
+    return msg
+
+
 def main():
     global new_msg, cloud, rgb
     cloud = None
@@ -54,6 +64,7 @@ def main():
         rospy.init_node('graspnet', anonymous=True)
         pub = rospy.Publisher('grasps', Path, queue_size=10)
         rospy.Subscriber("start_graspnet", Bool, sub_callback)
+        serviceStart = rospy.Service("grasp_generator/start", startSrv, startGraspnet)
         topic_name="kinect2/qhd/points"
         rate = rospy.Rate(5)
 
