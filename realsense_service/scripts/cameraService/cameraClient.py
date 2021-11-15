@@ -4,6 +4,7 @@ from realsense_service.srv import *
 import numpy as np
 import cv2
 from cv_bridge import CvBridge
+import sensor_msgs.point_cloud2 as pc2
 
 class CameraClient(object):
     """docstring for CameraClient."""
@@ -13,6 +14,7 @@ class CameraClient(object):
         self.rgb = 0
         self.depth = 0
         self.uv = 0
+        self.pointcloud = 0
 
         if self.type == "realsenseD435":
             self.baseService = "/sensors/realsense"
@@ -22,11 +24,13 @@ class CameraClient(object):
         self.serviceNameCapture = self.baseService + "/capture"
         self.serviceNameRGB = self.baseService + "/rgb"
         self.serviceNameDepth = self.baseService + "/depth"
-        self.serviceNameUV = self.baseService + "/pointcloudGeometry/static/uv"
+        self.serviceNameUV = self.baseService + "/pointcloud/static/uv"
+        self.serviceNamePointcloud = self.baseService + "/pointcloud/static/geometry"
 
         self.getRGB()
         self.getDepth()
         self.getUvStatic()
+        self.getPointCloudStatic()
 
     def captureNewScene(self):
         """ Tells the camera service to update the static data """
@@ -65,9 +69,9 @@ class CameraClient(object):
     def getUvStatic(self):
         """ Sets the self.uv to current static uv coordinates for translation
         from pixel coordinates to point cloud coordinates """
-        
-        rospy.wait_for_service("/sensors/realsense/pointcloudGeometry/static/uv")
-        uvStaticService = rospy.ServiceProxy("/sensors/realsense/pointcloudGeometry/static/uv", uvSrv)
+
+        rospy.wait_for_service(serviceNameUV)
+        uvStaticService = rospy.ServiceProxy(serviceNameUV, uvSrv)
         msg = uvSrv()
 
         msg.data = True
@@ -78,3 +82,35 @@ class CameraClient(object):
         uvStatic = np.array(response.uv.data).astype(int)
         uvStatic = np.reshape(uvStatic, (rows, cols))
         self.uv = uvStatic
+
+    def getPointCloudStatic(self):
+        """ sets self.pointcloud to the current static point cloud with geometry
+        only """
+
+        rospy.wait_for_service(serviceNamePointcloud)
+        pointcloudStaticService = rospy.ServiceProxy(serviceNamePointcloud, uvSrv)
+
+        msg = pointcloudSrv()
+        msg.data = True
+        reponse = pointcloudStaticService(msg)
+
+        # Get cloud data from ros_cloud
+        field_names = [field.name for field in response.pc.fields]
+        cloud_data = list(pc2.read_points(response.pc, skip_nans=True, field_names = field_names))
+
+        # Check empty
+        if len(cloud_data)==0:
+            print("Converting an empty cloud")
+            return None
+
+        xyz = [(x, y, z) for x, y, z in cloud_data ] # get xyz
+        xyz = np.array(xyz)
+
+        return xyz
+
+    global cloud
+    print("Got pointcloud")
+    cloud = convertCloudFromRosToOpen3d(data)
+
+
+def convertCloudFromRosToOpen3d(ros_cloud):

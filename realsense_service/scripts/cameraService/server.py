@@ -6,6 +6,7 @@ from realsense_service.srv import capture, captureResponse
 from realsense_service.srv import depth, depthResponse
 from realsense_service.srv import rgb, rgbResponse
 from realsense_service.srv import uvSrv, uvSrvResponse
+from realsense_service.srv import pointcloudSrv, pointcloudSrvResponse
 from std_msgs.msg import Header, Float32MultiArray, MultiArrayLayout, MultiArrayDimension
 from sensor_msgs.msg import Image, PointCloud2, PointField
 import sensor_msgs.point_cloud2 as pc2
@@ -66,11 +67,14 @@ class RealsenseServer(object):
         self.serviceCapture = rospy.Service(self.baseService + '/capture', capture, self.updateStatic)
         self.serviceCaptureDepth = rospy.Service(self.baseService + '/depth', depth, self.serviceSendDepthImageStatic)
         self.serviceCaptureRGB = rospy.Service(self.baseService + '/rgb', rgb, self.serviceSendRGBImageStatic)
+        self.serviceUVStatic = rospy.Service(self.baseService + '/pointcloud/static/uv', uvSrv, self.serviceUVStatic)
+        self.servicePointCloudStatic = rospy.Service(self.baseService + '/pointcloud/static/geometry', pointcloudSrv, self.servicePointCloud)
+
+
         self.pubPointCloudGeometryStatic = rospy.Publisher(self.baseService + "/pointcloudGeometry/static", PointCloud2, queue_size=1)
         self.pubStaticRGB = rospy.Publisher(self.baseService + "/rgb/static", Image, queue_size=1)
         self.pubStaticDepth = rospy.Publisher(self.baseService + "/depth/static", Image, queue_size = 1)
         self.pubPointCloudGeometryStaticRGB = rospy.Publisher(self.baseService + "/pointcloudGeometry/static/rgb", Float32MultiArray, queue_size=1)
-        self.serviceUVStatic = rospy.Service(self.baseService + '/pointcloudGeometry/static/uv', uvSrv, self.serviceUVStatic)
         self.rate = rospy.Rate(6)
 
         # Initialize realsense package
@@ -216,6 +220,12 @@ class RealsenseServer(object):
         msg = uvSrvResponse()
         msg.uv = uvMsg
         return msg
+
+    def servicePointCloud(self, command):
+        header = Header()
+        header.stamp = rospy.Time.now()
+        header.frame_id = "ptu_camera_color_optical_frame"
+        return pc2.create_cloud(header, self.FIELDS_XYZ, self.cloudGeometryStatic)
 
 
     def updateStatic(self, capture):
