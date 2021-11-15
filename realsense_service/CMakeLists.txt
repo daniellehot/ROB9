@@ -62,6 +62,7 @@ catkin_python_setup()
    depth.srv
    rgb.srv
    uvSrv.srv
+   pointcloud.srv
  )
 
 ## Generate actions in the 'action' folder

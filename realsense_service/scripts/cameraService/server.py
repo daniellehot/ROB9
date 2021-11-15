@@ -6,7 +6,7 @@ from realsense_service.srv import capture, captureResponse
 from realsense_service.srv import depth, depthResponse
 from realsense_service.srv import rgb, rgbResponse
 from realsense_service.srv import uvSrv, uvSrvResponse
-from realsense_service.srv import pointcloudSrv, pointcloudSrvResponse
+from realsense_service.srv import pointcloud, pointcloudResponse
 from std_msgs.msg import Header, Float32MultiArray, MultiArrayLayout, MultiArrayDimension
 from sensor_msgs.msg import Image, PointCloud2, PointField
 import sensor_msgs.point_cloud2 as pc2
@@ -68,7 +68,7 @@ class RealsenseServer(object):
         self.serviceCaptureDepth = rospy.Service(self.baseService + '/depth', depth, self.serviceSendDepthImageStatic)
         self.serviceCaptureRGB = rospy.Service(self.baseService + '/rgb', rgb, self.serviceSendRGBImageStatic)
         self.serviceUVStatic = rospy.Service(self.baseService + '/pointcloud/static/uv', uvSrv, self.serviceUVStatic)
-        self.servicePointCloudStatic = rospy.Service(self.baseService + '/pointcloud/static/geometry', pointcloudSrv, self.servicePointCloud)
+        self.servicePointCloudStatic = rospy.Service(self.baseService + '/pointcloud/static/geometry', pointcloud, self.servicePointCloud)
 
 
         self.pubPointCloudGeometryStatic = rospy.Publisher(self.baseService + "/pointcloudGeometry/static", PointCloud2, queue_size=1)
