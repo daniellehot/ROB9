@@ -4,6 +4,7 @@ import rospy
 import std_msgs.msg
 from affordancenet_service.srv import *
 from realsense_service.srv import *
+from grasping.srv import *
 from grasp_pose.srv import *
 import numpy as np
 import cv2
@@ -14,12 +15,13 @@ from geometry_msgs.msg import PoseStamped, Pose, PoseArray
 import tf2_ros
 import tf2_geometry_msgs
 import tf_conversions
-from tf.transformations import euler_from_quaternion, quaternion_from_euler, quaternion_matrix, quaternion_multiply
+from tf.transformations import euler_from_quaternion, quaternion_from_euler, quaternion_matrix, quaternion_multiply, quaternion_conjugate, unit_vector
 import copy
 import math
 from sensor_msgs.msg import PointCloud2
 import sensor_msgs.point_cloud2 as pc2
 from cameraService.cameraClient import CameraClient
+import open3d as o3d
 
 def getAffordanceResult(live_run, save=False):
     if live_run:
@@ -80,6 +82,7 @@ def run_graspnet(pub):
     print('Send start to graspnet')
     graspnet_msg = Bool()
     graspnet_msg.data = True
+
     pub.publish(graspnet_msg)
 
 
@@ -233,8 +236,8 @@ def inside_cube_test(points , cube3d):
 def fuse_grasp_affordance(cloud_masked, grasps_data, visualize=False, search_dist=0.1, vec_length=0.08, steps=20):
     # vizualize and remove outliers
     viz_cloud = viz_color_pointcloud(cloud_masked, [1, 0, 0])
-    _, ind = viz_cloud.remove_statistical_outlier(nb_neighbors=10, std_ratio=2.0)
-    viz_cloud = viz_cloud.select_down_sample(ind)
+    viz_cloud, _ = viz_cloud.remove_statistical_outlier(nb_neighbors=10, std_ratio=2.0)
+    #viz_cloud = viz_cloud.select_down_sample(ind)
 
     cloud_masked = np.array(cloud_masked)
 
@@ -251,7 +254,7 @@ def fuse_grasp_affordance(cloud_masked, grasps_data, visualize=False, search_dis
     # print(point_min)
     # print(point_max)
 
-    # Find grasps close to area of interest
+    # Find grasps close to area of interestgraspnet_msg = Bool()
     search_max = [x + search_dist for x in point_max]
     search_min = [x - search_dist for x in point_min]
     # Visualize bbox around search area for nearby grasps
@@ -359,12 +362,11 @@ def qv_mult(q1, v1):
 
 
 def handle_get_grasps(req):
-    global new_grasps, grasp_data, cloud
+    global new_grasps, grasp_data, cloud, tf_buffer, tf_listener
     save_data = False  # Should data be saved
     live_run = True  # Are the full system running or are we using loaded data
-
+    rate = rospy.Rate(5)
     if not rospy.is_shutdown():
-
         cam = CameraClient()
         cam.captureNewScene()
 
@@ -375,17 +377,22 @@ def handle_get_grasps(req):
         print('Capturing new scene...')
 
         print('Waiting for point cloud...')
-        cloudSubscriber = rospy.Subscriber("/sensors/realsense/pointcloudGeometry/static", PointCloud2, callbackPointCloud)
-        while cloud is None:
-            rate.sleep
-        cloudSubscriber.unregister()
+        #cloudSubscriber = rospy.Subscriber("/sensors/realsense/pointcloudGeometry/static", PointCloud2, callbackPointCloud)
+        #while cloud is None:
+        #    rate.sleep
+        #cloudSubscriber.unregister()
+        cloud = cam.getPointCloudStatic()
 
         print('Get uv index for pointcloud...')
         cloud_idx = cam.getUvStatic()
 
-        print('Run graspnet...')
-        pub_graspnet = rospy.Publisher('start_graspnet', Bool, queue_size=10)
-        run_graspnet(pub_graspnet)
+        rospy.wait_for_service("grasp_generator/start")
+        serviceStartGraspnet = rospy.ServiceProxy("grasp_generator/start", startSrv)
+
+        msg = startSrv()
+        msg.data = True
+        response = serviceStartGraspnet(msg)
+        print("Graspnet responded with: ", response)
 
         print('Getting affordance results...')
         masks, objects = getAffordanceResult(live_run, save=save_data)
@@ -405,7 +412,7 @@ def handle_get_grasps(req):
         # run through all objects found by affordance net
         graspObjects = []
         for obj_idx, mask in enumerate(masks):
-            
+
             # Merge masks and subtract unwanted masks
             mask_ids_to_add = [1, 2, 6, 7, 8]
             mask_full = merge_masks(mask, mask_ids_to_add, visualize=False)
@@ -415,12 +422,13 @@ def handle_get_grasps(req):
             for count, idx in enumerate(cloud_idx):
                 if mask_full[idx[0]][idx[1]] != 0:
                     cloud_masked.append(cloud[count])
-
+            cloud_masked = np.array(cloud_masked)
             graspObject = fuse_grasp_affordance(cloud_masked, graspDataThresholded, visualize=False)
-            
+
             # Set header.seq to object_id
             for grasp in graspObject:
-                grasp.header.seq = int(objects[obj_idx]) 
+                grasp.header.frame_id = str(objects[obj_idx])
+                grasp.header.seq = objects[obj_idx]
                 graspObjects.append(grasp)
 
             print('Nr. of grasps found: ' + str(len(graspObject)) + '  For object class: ' + str(objects[obj_idx]))
@@ -435,15 +443,15 @@ def handle_get_grasps(req):
             camera_frame = "ptu_camera_color_optical_frame"
 
         i, grasps, waypoints = 0, [], []
-        while True:
+        for i in range(len(graspObjects)):
 
-            if i >= len(graspObjects):
-                break
             grasp = graspObjects[i]
-            grasp.header.frame_id = camera_frame
+            #grasp.header.frame_id = camera_frame
 
             graspCamera = copy.deepcopy(grasp)
             waypointCamera = copy.deepcopy(grasp)
+            graspCamera.header.frame_id = camera_frame
+            waypointCamera.header.frame_id = camera_frame
 
             # computing waypoint in camera frame
             quaternion = (
@@ -480,9 +488,11 @@ def handle_get_grasps(req):
             if azimuthAngle > azimuthAngleLimit[0] and azimuthAngle < azimuthAngleLimit[1]:
                 if polarAngle > polarAngleLimit[0] and polarAngle < polarAngleLimit[1]:
                     waypointWorld.header.stamp = rospy.Time.now()
-                    waypointWorld.header.frame_id = world_frame
                     graspWorld.header.stamp = rospy.Time.now()
-                    graspWorld.header.frame_id = world_frame
+
+                    # overwrite frame_id's to be object id.
+                    graspWorld.header.frame_id = grasp.header.frame_id
+                    waypointWorld.header.frame_id = grasp.header.frame_id
 
                     waypoints.append(waypointWorld)
                     grasps.append(graspWorld)
@@ -512,22 +522,16 @@ def handle_get_grasps(req):
         grasps_msg.header.frame_id = "world"
         grasps_msg.header.stamp = rospy.Time.now()
         for i in range(len(grasps)):
-            if (i % 2) == 0:
-                index = 2
-            else:
-                index = 1
             grasps_msg.poses.append(waypoints[i])
-            grasps_msg.poses[-1].header.frame_id= str(index)
+            grasps_msg.poses[-1].header.frame_id = str(grasps[i].header.frame_id)
             grasps_msg.poses.append(grasps[i])
-            grasps_msg.poses[-1].header.frame_id= str(index)
+            grasps_msg.poses[-1].header.frame_id = str(grasps[i].header.frame_id)
         print("Sent grasps")
         return grasps_msg
 
-
-
-if __name__ == "__main__":
-
-    rospy.init_node('grasp_affordance_association', anonymous=False)
+def main():
+    global tf_buffer, tf_listener
+    rospy.init_node('grasp_pose', anonymous=True)
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
 
@@ -535,10 +539,14 @@ if __name__ == "__main__":
     pub_grasp = rospy.Publisher('pose_to_reach', PoseStamped, queue_size=10)
     pub_poses = rospy.Publisher('poses_to_reach', PoseArray, queue_size=10)
     pub_waypoint = rospy.Publisher('pose_to_reach_waypoint', PoseStamped, queue_size=10)
-
+    pub_graspnet = rospy.Publisher('/start_graspnet', Bool, queue_size=10)
+    grasp_server = rospy.Service('get_grasps', GetGrasps, handle_get_grasps)
 
     rate = rospy.Rate(5)
 
-    grasp_server = rospy.Service('get_grasps', GetGrasps, handle_get_grasps)
     print("grasps server is ready")
     rospy.spin()
+
+if __name__ == "__main__":
+
+    main()

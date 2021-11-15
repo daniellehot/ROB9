@@ -51,6 +51,7 @@ class CameraClient(object):
         response = rgbService(msg)
         img = np.frombuffer(response.img.data, dtype=np.uint8).reshape(response.img.height, response.img.width, -1)
         self.rgb = img
+        return self.rgb
 
 
     def getDepth(self):
@@ -65,6 +66,7 @@ class CameraClient(object):
         br = CvBridge()
         img = br.imgmsg_to_cv2(response.img, desired_encoding='passthrough')
         self.depth = img
+        return self.depth
 
     def getUvStatic(self):
         """ Sets the self.uv to current static uv coordinates for translation
@@ -82,6 +84,7 @@ class CameraClient(object):
         uvStatic = np.array(response.uv.data).astype(int)
         uvStatic = np.reshape(uvStatic, (rows, cols))
         self.uv = uvStatic
+        return self.uv
 
     def getPointCloudStatic(self):
         """ sets self.pointcloud to the current static point cloud with geometry
@@ -105,5 +108,6 @@ class CameraClient(object):
 
         xyz = [(x, y, z) for x, y, z in cloud_data ] # get xyz
         xyz = np.array(xyz)
+        self.pointcloud = xyz
 
-        return xyz
+        return self.pointcloud
