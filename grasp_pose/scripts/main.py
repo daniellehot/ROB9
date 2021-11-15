@@ -7,6 +7,7 @@ from realsense_service.srv import *
 from grasp_pose.srv import *
 import numpy as np
 import cv2
+import std_msgs.msg
 from std_msgs.msg import Bool
 from nav_msgs.msg import Path
 from std_msgs.msg import Float32MultiArray
@@ -67,9 +68,11 @@ def grasp_callback(data):
 
 def run_graspnet(pub):
     print('Send start to graspnet')
-    graspnet_msg = Bool()
+    graspnet_msg = std_msgs.msg.Bool()
     graspnet_msg.data = True
+    print(graspnet_msg)
     pub.publish(graspnet_msg)
+    print("Done")
 
 
 def transformFrame(tf_buffer, pose, orignalFrame, newFrame):
@@ -272,6 +275,8 @@ if __name__ == "__main__":
 
     grasp_server = rospy.Service('get_grasps', GetGrasps, handle_get_grasps)
     print("grasps server is ready")
+    run_graspnet(pub_graspnet)
+
     rospy.spin()
     """
     demo = False

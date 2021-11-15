@@ -40,62 +40,13 @@ def send_trajectory_to_rviz(plan):
     display_trajectory.trajectory.append(plan)
     display_trajectory_publisher.publish(display_trajectory)
 
-
-def move_to_goal(poses_msg):
-    print("Validating received grasps")
-    poses_length = len(poses_msg.poses)
-    for i in range(0, len(poses_msg.poses), 2):
-        end_index = len(poses_msg.poses) - 2
-        waypoint_msg = geometry_msgs.msg.PoseStamped()
-        waypoint_msg.header.frame_id = poses_msg.header.frame_id
-        waypoint_msg.header.stamp = rospy.Time.now()
-        waypoint_msg.pose = poses_msg.poses[i]
-        pub_waypoint.publish(waypoint_msg)
-
-        goal_msg = geometry_msgs.msg.PoseStamped()
-        goal_msg.header.frame_id = poses_msg.header.frame_id
-        goal_msg.header.stamp = rospy.Time.now()
-        goal_msg.pose = poses_msg.poses[i+1]
-        pub_grasp.publish(goal_msg)
-        poses_list = [waypoint_msg, goal_msg]
-
-        success_flag, plan = compute_trajectory(poses_list)
-
-        if success_flag==True:
-
-            print("Found a valid plan")
-            if isinstance(plan, list):
-                print("Executing a joint trajectory")
-                #rospy.sleep(3.)
-                for i in range(2):
-                    if i==1:
-                        current_state = robot.get_current_state()
-                        #print("move_to_goal state " + str(current_state))
-                    move_group.execute(plan[i], wait=True)
-                    move_group.stop()
-                    move_group.clear_pose_targets()
-                #rospy.sleep(3.)
-                move_to_ready()
-                break
-            else:
-                print("Executing a cartesian trajectory")
-                #rospy.sleep(3.)
-                move_group.execute(plan, wait=True)
-                move_group.stop()
-                move_group.clear_pose_targets()
-                #rospy.sleep(3.)
-                move_to_ready()
-                break
-        else:
-            if i == end_index:
-                print("None of the suggested grasps were valid")
-            else:
-                print("poses_length " + str(poses_length) + " index i " + str(i))
-                print("Cannot reach the suggested grasp. Will try different configuration")
+def callbackGripper():
+    global receivedGripperCommand
+    receivedGripperCommand = True
 
 
 def callback(msg):
-    global resp_trajectories
+    global resp_trajectories, receivedGripperCommand
     print("Callback")
     print("message data " + str(msg.data))
     id = msg.data
@@ -125,13 +76,24 @@ def callback(msg):
     goal_msg.pose = goal_poses[1].pose
     pub_grasp.publish(goal_msg)
 
-    rospy.sleep(6.)
+    #rospy.sleep(6.)
     for i in range(2):
+        send_trajectory_to_rviz(plans[i])
+        raw_input("Press Enter when you are ready to move the robot")
         move_group.execute(plans[i], wait=True)
         move_group.stop()
         move_group.clear_pose_targets()
+
+    receivedGripperCommand = False
+    rate = rospy.Rate(10)
+    subGrupper = rospy.Subscriber("gripper_controller", Int8, callbackGripper)
     gripper_pub.publish(close_gripper_msg)
-    rospy.sleep(4.)
+
+    while receivedGripperCommand == False:
+        gripper_pub.publish(close_gripper_msg)
+        rate.sleep()
+    #rospy.sleep(4.)
+    raw_input("Press Enter when you are ready to move the robot back to the ready pose")
     move_to_ready()
 
 
@@ -150,15 +112,15 @@ if __name__ == '__main__':
     print("Init")
     rospy.init_node('moveit_subscriber', anonymous=True)
     rospy.Subscriber('tool_id', Int8, callback)
-    gripper_pub = rospy.Publisher('gripper_controller', Int8, queue_size=1)
+    gripper_pub = rospy.Publisher('gripper_controller', Int8, queue_size=1, latch=True)
     pub_grasp = rospy.Publisher('pose_to_reach', PoseStamped, queue_size=10)
     pub_waypoint = rospy.Publisher('pose_to_reach_waypoint', PoseStamped, queue_size=10)
 
     moveit_commander.roscpp_initialize(sys.argv)
     robot = moveit_commander.RobotCommander()
     move_group = moveit_commander.MoveGroupCommander("manipulator")
-    move_group.set_max_acceleration_scaling_factor(0.1)
-    move_group.set_max_velocity_scaling_factor(0.1)
+    #move_group.set_max_acceleration_scaling_factor(0.1)
+    #move_group.set_max_velocity_scaling_factor(0.1)
 
 
     display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
@@ -183,6 +145,7 @@ if __name__ == '__main__':
 
     gripper_pub.publish(reset_gripper_msg)
     gripper_pub.publish(activate_gripper_msg)
+    gripper_pub.publish(open_gripper_msg)
     gripper_pub.publish(pinch_gripper_msg)
 
     print("Services init")
