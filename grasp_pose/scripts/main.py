@@ -512,11 +512,13 @@ def handle_get_grasps(req):
 
         weightedSums_sorted = sorted(weightedSums)
         grasps_sorted = [None]*len(grasps) # sorted according to delta orientation from current orientation of gripper
+        waypoints_sorted = [None]*len(waypoints)
 
         for i in range(len(weightedSums)):
             num = weightedSums_sorted[i]
             index = weightedSums.index(num)
             grasps_sorted[i] = grasps[index]
+            waypoints_sorted[i] = waypoints[index]
 
         grasps_msg = nav_msgs.msg.Path()
         grasps_msg.header.frame_id = "world"
