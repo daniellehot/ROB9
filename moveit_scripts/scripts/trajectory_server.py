@@ -165,6 +165,10 @@ def compute_trajectory(poses_list):
 
 
 def compute_start_to_waypoint(waypoint_pose):
+    current_state = moveit_msgs.msg.RobotState()
+    current_state = robot.get_current_state()
+    move_group.set_start_state(current_state)
+
     global replan_attempts, abort_attempts
     move_group.set_pose_target(waypoint_pose)
     plan_list = []
@@ -198,6 +202,8 @@ def compute_start_to_waypoint(waypoint_pose):
 
 
 def compute_waypoint_to_goal(waypoint_pose, goal_pose):
+    global replan_attempts, abort_attempts
+
     current_state = moveit_msgs.msg.RobotState()
     current_state = robot.get_current_state()
     start_state = moveit_msgs.msg.RobotState()
@@ -208,7 +214,7 @@ def compute_waypoint_to_goal(waypoint_pose, goal_pose):
     move_group.set_pose_target(goal_pose)
     plan_list = []
     plan_length = []
-    for i in range(20):
+    for i in range(replan_attempts):
         plan = move_group.plan()
         plan_list.append(plan)
         # print(plan)
@@ -239,8 +245,8 @@ def compute_waypoint_to_goal(waypoint_pose, goal_pose):
         #send_trajectory_to_rviz(plan)
         success_flag = True
 
-    #move_group.set_start_state(current_state)
-    move_group.set_start_state_to_current_state()
+    move_group.set_start_state(current_state)
+    #move_group.set_start_state_to_current_state()
     return success_flag, plan
 
 
@@ -287,7 +293,7 @@ if __name__ == '__main__':
     ap.add_argument("-attempts", type = int, default = 25,
         help = "Set the number of planning attempts")
     ap.add_argument("-replan_attempts", type = int, default = 20,
-        help = "Set the number replanning attempts")
+        help = "Set the number of replanning attempts")
     ap.add_argument("-abort_attempts", type = int, default = 5,
         help = "Set the number of consecutive failed planning attempts after which the planning is aborted and a new goal pose is selected.")
     ap.add_argument("-allow_Cartesian_planning", type = bool, default = False,

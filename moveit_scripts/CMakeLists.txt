@@ -76,6 +76,7 @@ generate_messages(
    nav_msgs
    geometry_msgs
    moveit_msgs
+   robotiq_3f_gripper_articulated_msgs
 )
 
 ################################################

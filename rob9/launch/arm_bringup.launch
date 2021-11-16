@@ -19,9 +19,9 @@
     <arg name="use_tool_communication" value="false"/>
   </include>
 
-  <node name="robotiq_robot_state_publisher" pkg="robotiq_3f_gripper_joint_state_publisher" type="robotiq_3f_gripper_joint_states"/>
-  <node name="robotiq_robot_controller" pkg="robotiq_3f_gripper_control" type="Robotiq3FGripperTcpNode.py" args="192.168.1.140"/>
-  <node name="gripper_controller" pkg="moveit_scripts" type="gripper_controller.py"/>
+  <node name="robotiq_robot_state_publisher" pkg="robotiq_3f_gripper_joint_state_publisher" type="robotiq_3f_gripper_joint_states" required="true"/>
+  <node name="robotiq_robot_controller" pkg="robotiq_3f_gripper_control" type="Robotiq3FGripperTcpNode.py" args="192.168.1.140" required="true"/>
+  <node name="gripper_controller" pkg="moveit_scripts" type="gripper_controller.py" required="true"/>
 
   <node name="start_ptu" pkg="ptu" type="start_ptu.py" required="true"/>
 

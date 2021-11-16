@@ -10,6 +10,10 @@
      <color rgba="1 1 1 1"/>
   </material>
 
+  <material name="blue">
+     <color rgba="0 0 1 1"/>
+  </material>
+
   <link name="world" />
 
   <link name="table">
@@ -110,7 +114,7 @@
         <box size="0.4 0.4 0.4345"/>
       </geometry>
       <origin rpy="0 0 0" xyz="0 0 0.0"/>
-      <material name="white"/>
+      <material name="blue"/>
     </visual>
     <collision>
       <geometry>

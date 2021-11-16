@@ -49,6 +49,7 @@ This serves as an example for publishing messages on the 'Robotiq3FGripperRobotO
 import rospy
 from robotiq_3f_gripper_articulated_msgs.msg import Robotiq3FGripperRobotOutput
 from std_msgs.msg import Int8
+from datetime import datetime
 
 def genCommand(int, command):
     # reset
@@ -119,14 +120,16 @@ def callback(msg):
     global command
     input = msg.data
     command = genCommand(input, command)
-    print(command, "\n")
+    dateTimeObj = datetime.now()
+    print(str(dateTimeObj) + " msg " + str(msg))
+    #print(command)
     pub.publish(command)
 
 
 if __name__ == '__main__':
     rospy.init_node('gripper_controller')
     rospy.Subscriber('gripper_controller', Int8, callback)
-    pub = rospy.Publisher('Robotiq3FGripperRobotOutput', Robotiq3FGripperRobotOutput, queue_size = 1)
+    pub = rospy.Publisher('Robotiq3FGripperRobotOutput', Robotiq3FGripperRobotOutput, queue_size = 10)
     command = Robotiq3FGripperRobotOutput()
 
     try:

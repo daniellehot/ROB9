@@ -1,0 +1,11 @@
+Quitting planning, the first five attempts failed
+None of the suggested grasps were valid
+[ERROR] [1637070747.271463]: Error processing request: 'NoneType' object has no attribute 'joint_trajectory'
+['Traceback (most recent call last):\n', '
+File "/opt/ros/melodic/lib/python2.7/dist-packages/rospy/impl/tcpros_service.py", line 636, in _handle_request\n
+transport.send_message(response, self.seq)\n',
+'File "/opt/ros/melodic/lib/python2.7/dist-packages/rospy/impl/tcpros_base.py", line 672, in send_message\n
+serialize_message(self.write_buff, seq, msg)\n', '
+File "/opt/ros/melodic/lib/python2.7/dist-packages/rospy/msg.py", line 152, in serialize_message\n    msg.serialize(b)\n',
+'  File "/home/daniel/test_ws/devel/lib/python2.7/dist-packages/moveit_scripts/srv/_GetTrajectories.py", line 571, in serialize\n
+  _v26 = val1.joint_trajectory\n', "AttributeError: 'NoneType' object has no attribute 'joint_trajectory'\n"]

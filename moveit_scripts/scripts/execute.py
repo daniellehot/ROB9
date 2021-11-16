@@ -31,6 +31,7 @@ def move_to_ready():
     plan = move_group.go(wait=True)
     move_group.stop()
     move_group.clear_pose_targets()
+    #gripper_pub.publish(open_gripper_msg)
     print("Done")
 
 def send_trajectory_to_rviz(plan):
@@ -40,13 +41,14 @@ def send_trajectory_to_rviz(plan):
     display_trajectory.trajectory.append(plan)
     display_trajectory_publisher.publish(display_trajectory)
 
-def callbackGripper():
-    global receivedGripperCommand
-    receivedGripperCommand = True
+#def callbackGripper():
+    #global receivedGripperCommand
+    #receivedGripperCommand = True
 
 
 def callback(msg):
-    global resp_trajectories, receivedGripperCommand
+    global resp_trajectories
+    #global receivedGripperCommand
     print("Callback")
     print("message data " + str(msg.data))
     id = msg.data
@@ -84,14 +86,14 @@ def callback(msg):
         move_group.stop()
         move_group.clear_pose_targets()
 
-    receivedGripperCommand = False
-    rate = rospy.Rate(10)
-    subGrupper = rospy.Subscriber("gripper_controller", Int8, callbackGripper)
+    #receivedGripperCommand = False
+    #rate = rospy.Rate(10)
+    #subGrupper = rospy.Subscriber("gripper_controller", Int8, callbackGripper)
     gripper_pub.publish(close_gripper_msg)
 
-    while receivedGripperCommand == False:
-        gripper_pub.publish(close_gripper_msg)
-        rate.sleep()
+    #while receivedGripperCommand == False:
+    #    gripper_pub.publish(close_gripper_msg)
+    #    rate.sleep()
     #rospy.sleep(4.)
     raw_input("Press Enter when you are ready to move the robot back to the ready pose")
     move_to_ready()
@@ -112,7 +114,9 @@ if __name__ == '__main__':
     print("Init")
     rospy.init_node('moveit_subscriber', anonymous=True)
     rospy.Subscriber('tool_id', Int8, callback)
-    gripper_pub = rospy.Publisher('gripper_controller', Int8, queue_size=1, latch=True)
+    gripper_pub = rospy.Publisher('gripper_controller', Int8, queue_size=10, latch=True)
+    # DO NOT REMOVE THIS SLEEP, it allows gripper_pub to establish connection to the topic
+    rospy.sleep(0.1)
     pub_grasp = rospy.Publisher('pose_to_reach', PoseStamped, queue_size=10)
     pub_waypoint = rospy.Publisher('pose_to_reach_waypoint', PoseStamped, queue_size=10)
 
