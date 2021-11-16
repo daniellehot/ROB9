@@ -2,6 +2,7 @@
 import sys
 import copy
 import rospy
+import argparse
 from moveit_scripts.srv import *
 from moveit_scripts.msg import *
 import moveit_commander
@@ -142,8 +143,10 @@ def compute_trajectory(poses_list):
 
     (plan, fraction) = move_group.compute_cartesian_path(waypoints, 0.01, 0.0)
     print("Cartesian plan fraction " + str(fraction))
+    #fraction = 1.1
 
-    if fraction == 1.0:
+    global success_fraction
+    if fraction == success_fraction:
         #send_trajectory_to_rviz(plan)
         success_flag = True
     else:
@@ -162,26 +165,25 @@ def compute_trajectory(poses_list):
 
 
 def compute_start_to_waypoint(waypoint_pose):
+    global replan_attempts, abort_attempts
     move_group.set_pose_target(waypoint_pose)
     plan_list = []
     plan_length = []
-    for i in range(20):
+    for i in range(replan_attempts):
         plan = move_group.plan()
         plan_list.append(plan)
         length = len(plan.joint_trajectory.points)
         if length == 0:
             length = 9999
         plan_length.append(length)
-        """
-        if i == 4:
+        if i == abort_attempts-1:
             counter = 0
-            for j in range (5):
+            for j in range (abort_attempts):
                 if plan_length[j]==9999:
                     counter += 1
-            if counter == 5:
+            if counter == abort_attempts:
                 print("Quitting planning, the first five attempts failed")
                 break
-        """
 
     min_index = plan_length.index(min(plan_length))
     plan = plan_list[min_index]
@@ -201,6 +203,7 @@ def compute_waypoint_to_goal(waypoint_pose, goal_pose):
     start_state = moveit_msgs.msg.RobotState()
     start_state = get_ik(waypoint_pose, current_state)
     move_group.set_start_state(start_state)
+
     #print("compute_waypoint_to_goal state " + str(start_state))
     move_group.set_pose_target(goal_pose)
     plan_list = []
@@ -213,16 +216,17 @@ def compute_waypoint_to_goal(waypoint_pose, goal_pose):
         if length == 0:
             length = 9999
         plan_length.append(length)
-        """
-        if i == 4:
+        if i == abort_attempts-1:
             counter = 0
-            for j in range (5):
+            for j in range (abort_attempts):
                 if plan_length[j]==9999:
                     counter += 1
-            if counter == 5:
+            if counter == abort_attempts:
                 print("Quitting planning, the first five attempts failed")
-                break
-        """
+                plan = None
+                success_flag = False
+                return success_flag, plan
+                #break
 
     #print("Plan lengths " + str(plan_length))
     min_index = plan_length.index(min(plan_length))
@@ -273,6 +277,31 @@ def handle_get_trajectories(req):
 
 
 if __name__ == '__main__':
+    ap = argparse.ArgumentParser()
+    ap.add_argument("-acc_scaling", type = float, default = 0.1,
+        help = "Set the maximum allowed acceleration of the robot")
+    ap.add_argument("-vel_scaling", type = float, default = 0.1,
+        help = "Set the maximum allowed velocity of the robot")
+    ap.add_argument("-time", type = float, default = 0.1,
+        help = "Set the planning time")
+    ap.add_argument("-attempts", type = int, default = 25,
+        help = "Set the number of planning attempts")
+    ap.add_argument("-replan_attempts", type = int, default = 20,
+        help = "Set the number replanning attempts")
+    ap.add_argument("-abort_attempts", type = int, default = 5,
+        help = "Set the number of consecutive failed planning attempts after which the planning is aborted and a new goal pose is selected.")
+    ap.add_argument("-allow_Cartesian_planning", type = bool, default = False,
+        help = "Set to True if you wish to attempt Cartesian planning. Be warned, MoveIt cannot prevent joint jumps. Good luck.")
+    args = ap.parse_args()
+    replan_attempts = args.replan_attempts
+    abort_attempts = args.abort_attempts
+    if args.allow_Cartesian_planning == False:
+        success_fraction = 1.1
+    else:
+        success_fraction = 1.0
+
+
+    #ap.add_argument("-attempts", "--set_num_planning_attempts" )
     rospy.init_node('moveit_subscriber', anonymous=True)
 
     tf_buffer = tf2_ros.Buffer()
@@ -282,7 +311,10 @@ if __name__ == '__main__':
     robot = moveit_commander.RobotCommander()
     move_group = moveit_commander.MoveGroupCommander("manipulator")
     move_group.allow_replanning(True)
-    move_group.set_planning_time(0.1)
+    move_group.set_max_acceleration_scaling_factor(args.acc_scaling)
+    move_group.set_max_velocity_scaling_factor(args.vel_scaling)
+    move_group.set_planning_time(args.time)
+    move_group.set_num_planning_attempts(args.attempts)
 
     trajectory_server = rospy.Service('get_trajectories', GetTrajectories, handle_get_trajectories)
     print("trajectory server is ready")

@@ -80,10 +80,11 @@ def grasp_callback(data):
 
 def run_graspnet(pub):
     print('Send start to graspnet')
-    graspnet_msg = Bool()
+    graspnet_msg = std_msgs.msg.Bool()
     graspnet_msg.data = True
 
     pub.publish(graspnet_msg)
+    print("Done")
 
 
 def transformFrame(tf_buffer, pose, orignalFrame, newFrame):
@@ -547,6 +548,8 @@ def main():
     rate = rospy.Rate(5)
 
     print("grasps server is ready")
+    run_graspnet(pub_graspnet)
+
     rospy.spin()
 
 if __name__ == "__main__":

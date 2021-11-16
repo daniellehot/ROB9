@@ -287,7 +287,7 @@ if __name__ == '__main__':
     move_group.set_max_acceleration_scaling_factor(0.1)
     move_group.set_max_velocity_scaling_factor(0.1)
     move_group.set_planning_time(0.1)
-    move_group.set_num_planning_attempts(50)
+    move_group.set_num_planning_attempts(25)
     #move_group.set_goal_orientation_tolerance(0.01)
     #move_group.set_goal_position_tolerance(0.01)
     #move_group.set_goal_joint_tolerance(0.02)
