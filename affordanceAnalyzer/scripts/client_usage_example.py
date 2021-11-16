@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import rospy
-from affordance_analyzer.srv import affordanceSrv, affordanceSrvResponse
+from affordance_analyzer.srv import getAffordanceSrv, getAffordanceSrvResponse
 import numpy as np
 import cv2
 from cameraService.cameraClient import CameraClient
@@ -10,6 +10,7 @@ if __name__ == "__main__":
     print("Usage example of client server service")
 
     affClient = AffordanceClient()
+    affClient.start()
 
     print("Telling affordanceNET to analyze image from realsense and return predictions.")
     _, _ = affClient.getAffordanceResult(CONF_THRESHOLD = 0.7)

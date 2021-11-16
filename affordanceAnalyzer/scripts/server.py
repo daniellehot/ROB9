@@ -9,7 +9,7 @@ import sys
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-from affordance_analyzer.srv import affordanceSrv, affordanceSrvResponse
+from affordance_analyzer.srv import *
 from std_msgs.msg import MultiArrayDimension
 import rospy
 from cameraService.cameraClient import CameraClient
@@ -300,7 +300,7 @@ def run_affordance_net(net, im, CONF_THRESHOLD = 0.7):
 
 def sendResults(bbox, objects, masks):
     intToLabel = {0: 'class', 1: 'height', 2: 'width'}
-    msg = affordanceSrvResponse()
+    msg = getAffordanceSrvResponse()
 
     # constructing mask message
     for i in range(3):
@@ -324,6 +324,8 @@ def sendResults(bbox, objects, masks):
     return msg
 
 def analyzeAffordance(msg):
+    global net
+
     cam = CameraClient()
     img = cam.getRGB()
 
@@ -347,8 +349,8 @@ def analyzeAffordance(msg):
 
     return sendResults(bbox, objects, masks)
 
-if __name__ == '__main__':
-    cfg.TEST.HAS_RPN = True  # Use RPN for proposals
+def startAffordance(msg):
+    global net
 
     prototxt = root_path + '/models/pascal_voc/VGG16/faster_rcnn_end2end/test.prototxt'
     caffemodel = root_path + '/pretrained/AffordanceNet_200K.caffemodel'
@@ -356,12 +358,37 @@ if __name__ == '__main__':
     if not os.path.isfile(caffemodel):
         raise IOError(('{:s} not found.\n').format(caffemodel))
 
-    caffe.set_mode_cpu()
+    GPU = msg.GPU
+    if GPU:
+        caffe.set_device(0)
+        caffe.set_mode_gpu()
+    else:
+        caffe.set_mode_cpu()
 
     # load network
     net = caffe.Net(prototxt, caffemodel, caffe.TEST)
     print '\n\nLoaded network {:s}'.format(caffemodel)
 
+    msg = startAffordanceSrvResponse()
+    return msg
+
+def stopAffordance(msg):
+    global net
+    del net
+    net = None
+
+    msg = stopAffordanceSrvResponse()
+    return msg
+
+
+if __name__ == '__main__':
+    global net
+
+    net = None
+    cfg.TEST.HAS_RPN = True  # Use RPN for proposals
+
     rospy.init_node('affordance_analyzer')
-    serviceCapture = rospy.Service('/affordance/result', affordanceSrv, analyzeAffordance)
+    serviceCapture = rospy.Service('/affordance/result', getAffordanceSrv, analyzeAffordance)
+    serviceCapture = rospy.Service('/affordance/start', startAffordanceSrv, startAffordance)
+    serviceCapture = rospy.Service('/affordance/stop', stopAffordanceSrv, stopAffordance)
     rospy.spin()

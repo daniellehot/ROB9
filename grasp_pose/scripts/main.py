@@ -305,6 +305,7 @@ def handle_get_grasps(req):
 
         print('Getting affordance results...')
         affClient = AffordanceClient()
+        affClient.start()
 
         _, _ = affClient.getAffordanceResult()
         affClient.processMasks(conf_threshold = 50, erode_kernel = (21,21))

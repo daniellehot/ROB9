@@ -2,7 +2,7 @@
 
 import sys
 import rospy
-from affordance_analyzer.srv import affordanceSrv, affordanceSrvResponse
+from affordance_analyzer.srv import *
 import numpy as np
 import cv2
 import copy
@@ -17,14 +17,34 @@ class AffordanceClient(object):
         self.masks = None
         self.bbox = None
         self.objects = None
+        self.GPU = False
 
         self.OBJ_CLASSES = ('__background__', 'bowl', 'tvm', 'pan', 'hammer', 'knife', 'cup', 'drill', 'racket', 'spatula', 'bottle')
+
+    def start(self, GPU=False):
+        self.GPU = GPU
+
+        rospy.wait_for_service("/affordance/start")
+        startAffordanceNetService = rospy.ServiceProxy("/affordance/start", startAffordanceSrv)
+        msg = startAffordanceSrv()
+        msg.data = GPU
+        print("here0")
+        response = startAffordanceNetService(msg)
+        print("here3")
+
+
+    def stop(self):
+        rospy.wait_for_service("/affordance/stop")
+        stopAffordanceNetService = rospy.ServiceProxy("/affordance/stop", stopAffordanceSrv)
+        msg = stopAffordanceSrv()
+        msg.data = True
+        response = startAffordanceNetService(msg)
 
     def getAffordanceResult(self, CONF_THRESHOLD = 0.7):
 
         rospy.wait_for_service("/affordance/result")
-        affordanceNetService = rospy.ServiceProxy("/affordance/result", affordanceSrv)
-        msg = affordanceSrv()
+        affordanceNetService = rospy.ServiceProxy("/affordance/result", getAffordanceSrv)
+        msg = getAffordanceSrv()
         msg.data = CONF_THRESHOLD
         response = affordanceNetService(msg)
 
