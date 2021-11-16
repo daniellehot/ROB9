@@ -21,71 +21,14 @@ import math
 from sensor_msgs.msg import PointCloud2
 import sensor_msgs.point_cloud2 as pc2
 from cameraService.cameraClient import CameraClient
+from affordanceService.client import AffordanceClient
 import open3d as o3d
-
-def getAffordanceResult(live_run, save=False):
-    if live_run:
-        rospy.wait_for_service("/affordanceNet/result")
-        affordanceNetService = rospy.ServiceProxy("/affordanceNet/result", affordance)
-        msg = affordance()
-        msg.data = True
-        response = affordanceNetService(msg)
-
-        no_objects = int(response.masks.layout.dim[0].size / 10)
-        masks = np.asarray(response.masks.data).reshape((no_objects, int(response.masks.layout.dim[0].size / no_objects), response.masks.layout.dim[1].size, response.masks.layout.dim[2].size)) #* 255
-        masks = masks.astype(np.uint8)
-
-        bbox = np.asarray(response.bbox.data).reshape((-1,4))
-
-        objects = np.asarray(response.object.data)
-        print('----------Affordance results---------')
-        print('Shape: ' + str(masks.shape))
-        print('Data type: ' + str(masks.dtype))
-        print('Bounding box: ' + str(bbox))
-        print('Objects: ' + str(objects))
-
-        if save:
-            with open('data/mask_meta.txt', 'w') as f:
-                f.write('Shape: ' + str(masks.shape) + '\n')
-                f.write('Data type: ' + str(masks.dtype) + '\n')
-                f.write('Bounding box: ' + str(bbox) + '\n')
-                f.write('Objects: ' + str(objects) + '\n')
-
-            for j in range(len(masks)):
-                for i in range(10):
-                    title_img = 'data/mask_'+str(j)+'_'+str(i)+'.jpg'
-                    cv2.imwrite(title_img, masks[j][i])
-
-        return masks, objects
-
-    else:
-        objects = [4]
-        masks = []
-        for j in range(1):
-            mask = []
-            for i in range(10):
-                title_img = 'data/mask_' + str(j) + '_' + str(i) + '.jpg'
-                img = cv2.imread(title_img)
-                mask.append(img)
-            masks.append(mask)
-        return masks, objects
-
 
 def grasp_callback(data):
     global new_grasps, grasp_data
     print('Recieved grasps')
     grasp_data = data
     new_grasps = True
-
-
-def run_graspnet(pub):
-    print('Send start to graspnet')
-    graspnet_msg = std_msgs.msg.Bool()
-    graspnet_msg.data = True
-
-    pub.publish(graspnet_msg)
-    print("Done")
-
 
 def transformFrame(tf_buffer, pose, orignalFrame, newFrame):
     pose.header.stamp = rospy.Time.now()
@@ -120,32 +63,6 @@ def calculate_delta_orientation(graspWorld, eeWorld):
     deltaRPY = np.asarray(euler_from_quaternion(deltaQuaternion)) * 180 / math.pi
     return deltaRPY
 
-
-def callbackPointCloud(data):
-    global cloud
-    print("Got pointcloud")
-    cloud = convertCloudFromRosToOpen3d(data)
-
-
-def convertCloudFromRosToOpen3d(ros_cloud):
-
-    # Get cloud data from ros_cloud
-    field_names = [field.name for field in ros_cloud.fields]
-    cloud_data = list(pc2.read_points(ros_cloud, skip_nans=True, field_names = field_names))
-
-    # Check empty
-    if len(cloud_data)==0:
-        print("Converting an empty cloud")
-        return None
-
-    xyz = [(x, y, z) for x, y, z in cloud_data ] # get xyz
-    xyz = np.array(xyz)
-    xyz = xyz[xyz[:, 2] < 1.0]
-
-    # return
-    return xyz
-
-
 # Merge list of masks, return as one greyscale image mask
 def merge_masks(masks, ids=[], visualize=False):
     # loop here for all objects
@@ -153,10 +70,8 @@ def merge_masks(masks, ids=[], visualize=False):
     mask_full = np.zeros((masks.shape[1], masks.shape[2])).astype(np.uint8)
     for i in range(1, masks.shape[0]):
         if i in ids:
-            kernel = np.ones((21,21), np.uint8)
             m = np.zeros((masks.shape[1], masks.shape[2])).astype(np.uint8)
-            m[masks[i] > 50] = masks[i, masks[i] > 50]
-            m = cv2.erode(m, kernel)
+            m[masks[i] > 1] = masks[i, masks[i] > 1]
             mask_full[m > 0] = m[m>0]
 
     if visualize:
@@ -363,30 +278,23 @@ def qv_mult(q1, v1):
 
 
 def handle_get_grasps(req):
-    global new_grasps, grasp_data, cloud, tf_buffer, tf_listener
-    save_data = False  # Should data be saved
-    live_run = True  # Are the full system running or are we using loaded data
-    rate = rospy.Rate(5)
-    if not rospy.is_shutdown():
-        cam = CameraClient()
-        cam.captureNewScene()
+    global new_grasps, grasp_data, cloud, tf_buffer, tf_listener, rate
 
-        new_grasps = False
-        cloud = None
-        cloud_idx = None
+    if not rospy.is_shutdown():
+
+        # initialize the camera client
+        cam = CameraClient()
 
         print('Capturing new scene...')
+        cam.captureNewScene()
 
-        print('Waiting for point cloud...')
-        #cloudSubscriber = rospy.Subscriber("/sensors/realsense/pointcloudGeometry/static", PointCloud2, callbackPointCloud)
-        #while cloud is None:
-        #    rate.sleep
-        #cloudSubscriber.unregister()
+        # Get point cloud and uv indexes for translating from image to point
+        # cloud.
         cloud = cam.getPointCloudStatic()
-
-        print('Get uv index for pointcloud...')
         cloud_idx = cam.getUvStatic()
 
+        # TODO: Refactor
+        print("Getting grasps")
         rospy.wait_for_service("grasp_generator/start")
         serviceStartGraspnet = rospy.ServiceProxy("grasp_generator/start", startSrv)
 
@@ -396,10 +304,27 @@ def handle_get_grasps(req):
         print("Graspnet responded with: ", response)
 
         print('Getting affordance results...')
-        masks, objects = getAffordanceResult(live_run, save=save_data)
+        affClient = AffordanceClient()
+
+        _, _ = affClient.getAffordanceResult()
+        affClient.processMasks(conf_threshold = 50, erode_kernel = (21,21))
+
+        masks = affClient.masks
+        objects = affClient.objects
 
         print('Waiting for grasps from graspnet...')
-        while not new_grasps and not rospy.is_shutdown():
+        while not rospy.is_shutdown():
+            if cloud is None:
+                print("Waiting for point cloud...")
+            if cloud_idx is None:
+                print("Waiting for uv coordinates...")
+            if new_grasps is None:
+                print("Waiting for grasp service...")
+            if masks is None or objects is None:
+                print("Waiting for affordance service...")
+            if masks is not None and objects is not None and new_grasps is not None and cloud_idx is not None and cloud is not None:
+                print("Recieved everything, proceeding to grasp affordance association...")
+                break
             rate.sleep()
 
         #Remove grasps with low score
@@ -533,22 +458,18 @@ def handle_get_grasps(req):
         return grasps_msg
 
 def main():
-    global tf_buffer, tf_listener
-    rospy.init_node('grasp_pose', anonymous=True)
+    global tf_buffer, tf_listener, rate
+    print("Setting up grasp affordance association service...")
+
+    rospy.init_node('grasp_affordance_association', anonymous=True)
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
-
     rospy.Subscriber("grasps", Path, grasp_callback)
-    pub_grasp = rospy.Publisher('pose_to_reach', PoseStamped, queue_size=10)
-    pub_poses = rospy.Publisher('poses_to_reach', PoseArray, queue_size=10)
-    pub_waypoint = rospy.Publisher('pose_to_reach_waypoint', PoseStamped, queue_size=10)
-    pub_graspnet = rospy.Publisher('/start_graspnet', Bool, queue_size=10)
     grasp_server = rospy.Service('get_grasps', GetGrasps, handle_get_grasps)
 
     rate = rospy.Rate(5)
 
-    print("grasps server is ready")
-    run_graspnet(pub_graspnet)
+    print("Grasp affordance association service is ready!")
 
     rospy.spin()
 

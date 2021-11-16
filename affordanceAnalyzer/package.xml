@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>affordancenet_service</name>
+  <name>affordance_analyzer</name>
   <version>0.0.0</version>
   <description>The service_example package</description>
 

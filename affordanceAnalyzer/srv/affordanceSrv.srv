@@ -1,4 +1,4 @@
-std_msgs/Bool command
+std_msgs/Float32 confidence_threshold
 ---
 std_msgs/Int32MultiArray masks
 std_msgs/Int32MultiArray bbox

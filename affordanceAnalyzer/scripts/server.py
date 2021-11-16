@@ -1,10 +1,6 @@
-
-
-import _init_paths
-from fast_rcnn.config import cfg
-from fast_rcnn.test import im_detect2
-from fast_rcnn.nms_wrapper import nms
-from utils.timer import Timer
+#!/usr/bin/env python
+# modified from: https://github.com/nqanh/affordance-net/blob/master/tools/demo_img.py
+import sys
 
 import numpy as np
 import os, cv2
@@ -13,19 +9,28 @@ import sys
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-from affordancenet_service.srv import affordance, affordanceResponse
+from affordance_analyzer.srv import affordanceSrv, affordanceSrvResponse
 from std_msgs.msg import MultiArrayDimension
-import realsense_utils
 import rospy
+from cameraService.cameraClient import CameraClient
 
 import caffe
+
+sys.path.append('/affordance-net/tools')
+
+import _init_paths
+from fast_rcnn.config import cfg
+from fast_rcnn.test import im_detect2
+from fast_rcnn.nms_wrapper import nms
+from utils.timer import Timer
 
 CONF_THRESHOLD = 0.7
 good_range = 0.005
 
 # get current dir
 cwd = os.getcwd()
-root_path = os.path.abspath(os.path.join(cwd, os.pardir))  # get parent path
+#root_path = os.path.abspath(os.path.join(cwd, os.pardir))  # get parent path
+root_path = "/affordance-net/"
 print 'AffordanceNet root folder: ', root_path
 img_folder = cwd + '/img'
 
@@ -240,7 +245,7 @@ def visualize_mask(im, rois_final, rois_class_score, rois_class_ind, masks, ori_
 
 
 
-def run_affordance_net(net, im):
+def run_affordance_net(net, im, CONF_THRESHOLD = 0.7):
 
     ori_height, ori_width, _ = im.shape
 
@@ -264,8 +269,6 @@ def run_affordance_net(net, im):
 
     inds = np.where(rois_class_score[:, -1] >= CONF_THRESHOLD)[0]
     # get mask
-    print(inds)
-    print(rois_final.shape)
     rois_final = rois_final[inds]
     rois_class_ind = rois_class_ind[inds]
     masks = masks[inds, :, :, :]
@@ -297,7 +300,7 @@ def run_affordance_net(net, im):
 
 def sendResults(bbox, objects, masks):
     intToLabel = {0: 'class', 1: 'height', 2: 'width'}
-    msg = affordanceResponse()
+    msg = affordanceSrvResponse()
 
     # constructing mask message
     for i in range(3):
@@ -320,12 +323,15 @@ def sendResults(bbox, objects, masks):
 
     return msg
 
-def analyzeAffordance(aff):
-    img = realsense_utils.getRGB()
+def analyzeAffordance(msg):
+    cam = CameraClient()
+    img = cam.getRGB()
 
-    print("Analyzing affordance")
+    CONF_THRESHOLD = msg.confidence_threshold.data
+
+    print("Analyzing affordance with confidence threshold: ", CONF_THRESHOLD)
     try:
-        bbox, objects, masks = run_affordance_net(net, img)
+        bbox, objects, masks = run_affordance_net(net, img, CONF_THRESHOLD=CONF_THRESHOLD)
         bbox = bbox[:,1:]
         m = masks[0]
         for i in range(len(masks)-1):
@@ -356,8 +362,6 @@ if __name__ == '__main__':
     net = caffe.Net(prototxt, caffemodel, caffe.TEST)
     print '\n\nLoaded network {:s}'.format(caffemodel)
 
-    #realsense_utils.captureRealsense()
-    #realsense_utils.getDepth()
-    rospy.init_node('affordanceNet_service')
-    serviceCapture = rospy.Service('/affordanceNet/result', affordance, analyzeAffordance)
+    rospy.init_node('affordance_analyzer')
+    serviceCapture = rospy.Service('/affordance/result', affordanceSrv, analyzeAffordance)
     rospy.spin()
