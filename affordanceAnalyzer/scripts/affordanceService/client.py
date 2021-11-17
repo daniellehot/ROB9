@@ -30,6 +30,8 @@ class AffordanceClient(object):
         msg.data = GPU
         response = startAffordanceNetService(msg)
 
+        return response.status.data
+
 
     def stop(self):
         rospy.wait_for_service("/affordance/stop")
@@ -38,12 +40,24 @@ class AffordanceClient(object):
         msg.data = True
         response = startAffordanceNetService(msg)
 
-    def getAffordanceResult(self, CONF_THRESHOLD = 0.7):
+        return response.status.data
+
+    def run(self, CONF_THRESHOLD = 0.7):
+        rospy.wait_for_service("/affordance/run")
+        runAffordanceNetService = rospy.ServiceProxy("/affordance/run", runAffordanceSrv)
+        msg = runAffordanceSrv()
+        msg.data = CONF_THRESHOLD
+        response = runAffordanceNetService(msg)
+        print(response)
+
+        return response.success.data
+
+    def getAffordanceResult(self):
 
         rospy.wait_for_service("/affordance/result")
         affordanceNetService = rospy.ServiceProxy("/affordance/result", getAffordanceSrv)
         msg = getAffordanceSrv()
-        msg.data = CONF_THRESHOLD
+        msg.data = True
         response = affordanceNetService(msg)
 
         no_objects = int(response.masks.layout.dim[0].size / 10)
@@ -125,8 +139,8 @@ class AffordanceClient(object):
         cam = CameraClient()
         img = copy.deepcopy(cam.getRGB())
 
-        colors = [(200, 0, 0), (0,200,0), (0,0,200), (25, 74, 5), (98, 7, 55),
-                (0,8,77), (10,89,33), (80, 60, 40), (20,0,99), (55, 55, 25)]
+        colors = [(0,0,205), (34,139,34), (192,192,128), (165, 42, 42), (128, 64, 128),
+                (204, 102, 0), (184, 134, 11), (0, 153, 153), (0, 134, 141), (184, 0, 141)]
 
         full_mask = np.zeros(img.shape).astype(np.uint8)
         for i in range(self.masks.shape[0]):

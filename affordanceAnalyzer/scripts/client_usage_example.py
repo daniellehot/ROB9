@@ -13,7 +13,8 @@ if __name__ == "__main__":
     affClient.start(GPU=False) # GPU acceleratio True or False
 
     print("Telling affordanceNET to analyze image from realsense and return predictions.")
-    _, _ = affClient.getAffordanceResult(CONF_THRESHOLD = 0.3)
+    success = affClient.run(CONF_THRESHOLD = 0.3)
+    _, _ = affClient.getAffordanceResult()
 
     success = affClient.processMasks(conf_threshold = 50, erode_kernel=(21,21))
     success = affClient.visualizeMasks()
