@@ -1,67 +1,26 @@
 #!/usr/bin/env python2.7
+
 import sys
-import rospy
-import std_msgs.msg
-from affordancenet_service.srv import *
-from realsense_service.srv import *
-from grasping.srv import *
-from grasp_pose.srv import *
 import numpy as np
+import copy
+import math
 import cv2
-from std_msgs.msg import Bool, Float32MultiArray
+import open3d as o3d
+
+import rospy
 from nav_msgs.msg import Path
-import geometry_msgs.msg
-from geometry_msgs.msg import PoseStamped, Pose, PoseArray
+from geometry_msgs.msg import PoseStamped, Pose
 import tf2_ros
 import tf2_geometry_msgs
 import tf_conversions
 from tf.transformations import euler_from_quaternion, quaternion_from_euler, quaternion_matrix, quaternion_multiply, quaternion_conjugate, unit_vector
-import copy
-import math
-from sensor_msgs.msg import PointCloud2
-import sensor_msgs.point_cloud2 as pc2
+
+# ROB9
 from cameraService.cameraClient import CameraClient
 from affordanceService.client import AffordanceClient
-import open3d as o3d
-
-def grasp_callback(data):
-    global new_grasps, grasp_data
-    print('Recieved grasps')
-    grasp_data = data
-    new_grasps = True
-
-def transformFrame(tf_buffer, pose, orignalFrame, newFrame):
-    pose.header.stamp = rospy.Time.now()
-    transformed_pose_msg = geometry_msgs.msg.PoseStamped()
-    tf_buffer.lookup_transform(orignalFrame, newFrame, rospy.Time.now(), rospy.Duration(1))
-    transformed_pose_msg = tf_buffer.transform(pose, newFrame)
-    return transformed_pose_msg
-
-
-def cartesianToSpherical(x, y, z):
-    polar = math.atan2(math.sqrt(x**2 + y**2), z)
-    azimuth = math.atan2(y, x)
-    r = math.sqrt(x**2 + y**2 + z**2)
-    return r, polar, azimuth
-
-
-def calculate_delta_orientation(graspWorld, eeWorld):
-    graspWorldQuaternion = (
-        graspWorld.pose.orientation.x,
-        graspWorld.pose.orientation.y,
-        graspWorld.pose.orientation.z,
-        graspWorld.pose.orientation.w)
-    graspWorldRPY = np.asarray(euler_from_quaternion(graspWorldQuaternion)) * 180 / math.pi
-
-    eeWorldQuaternionInv = (
-        eeWorld.transform.rotation.x,
-        eeWorld.transform.rotation.y,
-        eeWorld.transform.rotation.z,
-        -eeWorld.transform.rotation.w)
-
-    deltaQuaternion = quaternion_multiply(graspWorldQuaternion, eeWorldQuaternionInv)
-    deltaRPY = np.asarray(euler_from_quaternion(deltaQuaternion)) * 180 / math.pi
-    return deltaRPY
+from graspGenerator.client import GraspingGeneratorClient
+import rob9Utils.transformations as transform
+from grasp_pose.srv import *
 
 # Merge list of masks, return as one greyscale image mask
 def merge_masks(masks, ids=[], visualize=False):
@@ -153,7 +112,6 @@ def fuse_grasp_affordance(cloud_masked, grasps_data, visualize=False, search_dis
     # vizualize and remove outliers
     viz_cloud = viz_color_pointcloud(cloud_masked, [1, 0, 0])
     viz_cloud, _ = viz_cloud.remove_statistical_outlier(nb_neighbors=10, std_ratio=2.0)
-    #viz_cloud = viz_cloud.select_down_sample(ind)
 
     cloud_masked = np.array(cloud_masked)
 
@@ -278,7 +236,7 @@ def qv_mult(q1, v1):
 
 
 def handle_get_grasps(req):
-    global new_grasps, grasp_data, cloud, tf_buffer, tf_listener, rate
+    global tf_buffer, tf_listener, rate
 
     if not rospy.is_shutdown():
 
@@ -293,22 +251,27 @@ def handle_get_grasps(req):
         cloud = cam.getPointCloudStatic()
         cloud_idx = cam.getUvStatic()
 
-        # TODO: Refactor
-        print("Getting grasps")
-        rospy.wait_for_service("grasp_generator/start")
-        serviceStartGraspnet = rospy.ServiceProxy("grasp_generator/start", startSrv)
+        # Get grasps from grasp generator
+        graspClient = GraspingGeneratorClient()
 
-        msg = startSrv()
-        msg.data = True
-        response = serviceStartGraspnet(msg)
-        print("Graspnet responded with: ", response)
+        collision_thresh = 0.01 # Collision threshold in collision detection
+        num_view = 300 # View number
+        score_thresh = 0.0 # Remove every grasp with scores less than threshold
+        voxel_size = 0.2
+
+        graspClient.setSettings(collision_thresh, num_view, score_thresh, voxel_size)
+
+        # Load the network with GPU (True or False) or CPU
+        graspClient.start(GPU=False)
+
+        graspData = graspClient.getGrasps()
 
         print('Getting affordance results...')
         affClient = AffordanceClient()
-        affClient.start()
+        affClient.start(GPU=False)
 
-        _, _ = affClient.getAffordanceResult()
-        affClient.processMasks(conf_threshold = 50, erode_kernel = (21,21))
+        _, _ = affClient.getAffordanceResult(CONF_THRESHOLD = 0.3)
+        affClient.processMasks(conf_threshold = 40, erode_kernel = (7,7))
 
         masks = affClient.masks
         objects = affClient.objects
@@ -319,7 +282,7 @@ def handle_get_grasps(req):
                 print("Waiting for point cloud...")
             if cloud_idx is None:
                 print("Waiting for uv coordinates...")
-            if new_grasps is None:
+            if grasp_data is None:
                 print("Waiting for grasp service...")
             if masks is None or objects is None:
                 print("Waiting for affordance service...")
@@ -327,14 +290,6 @@ def handle_get_grasps(req):
                 print("Recieved everything, proceeding to grasp affordance association...")
                 break
             rate.sleep()
-
-        #Remove grasps with low score
-        graspDataThresholded = []
-        GRASP_SCORE_THRESHOLD = 0.1
-        for i in range(len(grasp_data.poses)):
-            grasp = grasp_data.poses[i]
-            if float(grasp.header.frame_id) > GRASP_SCORE_THRESHOLD:
-                graspDataThresholded.append(grasp)
 
         # run through all objects found by affordance net
         graspObjects = []
@@ -350,7 +305,7 @@ def handle_get_grasps(req):
                 if mask_full[idx[0]][idx[1]] != 0:
                     cloud_masked.append(cloud[count])
             cloud_masked = np.array(cloud_masked)
-            graspObject = fuse_grasp_affordance(cloud_masked, graspDataThresholded, visualize=False)
+            graspObject = fuse_grasp_affordance(cloud_masked, graspData, visualize=False)
 
             # Set header.seq to object_id
             for grasp in graspObject:
@@ -397,8 +352,8 @@ def handle_get_grasps(req):
 
             # computing waypoint and grasp in world frame
 
-            waypointWorld = transformFrame(tf_buffer, waypointCamera, camera_frame, world_frame)
-            graspWorld = transformFrame(tf_buffer, graspCamera, camera_frame, world_frame)
+            waypointWorld = transform.transformToFrame(tf_buffer, waypointCamera, camera_frame, world_frame)
+            graspWorld = transform.transformToFrame(tf_buffer, graspCamera, camera_frame, world_frame)
 
             # computing local cartesian coordinates
             x = waypointWorld.pose.position.x - graspWorld.pose.position.x
@@ -406,7 +361,7 @@ def handle_get_grasps(req):
             z = waypointWorld.pose.position.z - graspWorld.pose.position.z
 
             # computing spherical coordinates
-            r, polarAngle, azimuthAngle = cartesianToSpherical(x, y, z)
+            r, polarAngle, azimuthAngle = transform.cartesianToSpherical(x, y, z)
 
             # Evaluating angle limits
             azimuthAngleLimit = [-1*math.pi, 1*math.pi]
@@ -433,7 +388,7 @@ def handle_get_grasps(req):
         weightedSums = []
 
         for i in range(len(grasps)):
-            deltaRPY = abs(calculate_delta_orientation(grasps[i], eeWorld))
+            deltaRPY = abs(transform.delta_orientation(grasps[i], eeWorld))
             weightedSum = 0.2*deltaRPY[0]+0.4*deltaRPY[1]+0.4*deltaRPY[2]
             weightedSums.append(weightedSum)
 
@@ -465,7 +420,6 @@ def main():
     rospy.init_node('grasp_affordance_association', anonymous=True)
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
-    rospy.Subscriber("grasps", Path, grasp_callback)
     grasp_server = rospy.Service('get_grasps', GetGrasps, handle_get_grasps)
 
     rate = rospy.Rate(5)

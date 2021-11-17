@@ -10,10 +10,10 @@ if __name__ == "__main__":
     print("Usage example of client server service")
 
     affClient = AffordanceClient()
-    affClient.start()
+    affClient.start(GPU=False) # GPU acceleratio True or False
 
     print("Telling affordanceNET to analyze image from realsense and return predictions.")
-    _, _ = affClient.getAffordanceResult(CONF_THRESHOLD = 0.7)
+    _, _ = affClient.getAffordanceResult(CONF_THRESHOLD = 0.3)
 
     success = affClient.processMasks(conf_threshold = 50, erode_kernel=(21,21))
     success = affClient.visualizeMasks()

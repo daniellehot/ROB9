@@ -28,9 +28,7 @@ class AffordanceClient(object):
         startAffordanceNetService = rospy.ServiceProxy("/affordance/start", startAffordanceSrv)
         msg = startAffordanceSrv()
         msg.data = GPU
-        print("here0")
         response = startAffordanceNetService(msg)
-        print("here3")
 
 
     def stop(self):
