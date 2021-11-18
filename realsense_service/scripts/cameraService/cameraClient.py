@@ -15,6 +15,7 @@ class CameraClient(object):
         self.depth = 0
         self.uv = 0
         self.pointcloud = 0
+        self.pointcloudColor = 0
 
         if self.type == "realsenseD435":
             self.baseService = "/sensors/realsense"
@@ -25,7 +26,7 @@ class CameraClient(object):
         self.serviceNameRGB = self.baseService + "/rgb"
         self.serviceNameDepth = self.baseService + "/depth"
         self.serviceNameUV = self.baseService + "/pointcloud/static/uv"
-        self.serviceNamePointcloud = self.baseService + "/pointcloud/static/geometry"
+        self.serviceNamePointcloud = self.baseService + "/pointcloud/static"
 
         self.getRGB()
         self.getDepth()
@@ -64,7 +65,7 @@ class CameraClient(object):
         msg.data = True
         response = depthService(msg)
         br = CvBridge()
-        img = br.imgmsg_to_cv2(response.img, desired_encoding='passthrough')
+        img = np.frombuffer(response.img.data, dtype=np.float16).reshape(response.img.height, response.img.width, -1)
         self.depth = img
         return self.depth
 
@@ -110,4 +111,9 @@ class CameraClient(object):
         xyz = np.array(xyz)
         self.pointcloud = xyz
 
-        return self.pointcloud
+        # get colors
+        color = np.asarray(response.color.data)
+        color = np.reshape(color, (-1,3)) / 255
+        self.pointcloudColor = np.flip(color, axis=1)
+
+        return self.pointcloud, self.pointcloudColor

@@ -7,6 +7,7 @@ import rospy
 import numpy as np
 import scipy.io as scio
 from ctypes import * # convert float to uint32
+from cv_bridge import CvBridge
 
 from nav_msgs.msg import Path
 from graspnetAPI import GraspGroup
@@ -46,7 +47,7 @@ class GraspServer(object):
 
         self.serviceRun = rospy.Service("grasp_generator/result", runGraspingSrv, self.run)
         self.serviceStart = rospy.Service("grasp_generator/start", startGraspingSrv, self.start)
-        self.serviceSetSettings = rospy.Service("grasp_generator/set_settings", settingsGraspingSrv, self.set_settings)
+        self.serviceSetSettings = rospy.Service("grasp_generator/set_settings", setSettingsGraspingSrv, self.set_settings)
 
     def set_settings(self, msg):
 
@@ -66,7 +67,8 @@ class GraspServer(object):
     def start(self, msg):
 
         print('Loading network...')
-        self.net = get_net()
+        self.GPU = msg.GPU.data
+        self.net = self.get_net()
         print('Network loaded')
         print('Waiting for go...')
 
@@ -80,8 +82,7 @@ class GraspServer(object):
             print("No grasping network is initialized.")
             return runGraspingSrvResponse()
 
-        cloud = cam.getPointCloudStatic()
-        rgb = cam.getRGB()
+        cloud, rgb = cam.getPointCloudStatic()
 
         while cloud is None or rgb is None:
             self.rate.sleep
@@ -90,17 +91,17 @@ class GraspServer(object):
 
         end_points = self.get_and_process_data(cloud, rgb)
 
-        gg = self.get_grasps(net, end_points)
+        gg = self.get_grasps(end_points)
         if self.collision_thresh > 0:
             gg = self.collision_detection(gg, cloud)
         gg.nms()
         gg = self.remove_grasps_under_score(gg, self.score_thresh) #  Score range between 0 and 2. Under 0.1 bad, over 0.7 good
 
         print("Computed grasps, now sending...")
-        msg = startGraspingSrvResponse()
-        msg.Path = self.generate_ros_message(gg)
+        #msg = startGraspingSrvResponse()
+        #msg.Path = self.generate_ros_message(gg)
 
-        return msg
+        return self.generate_ros_message(gg)
 
     def get_net(self):
         # Init the model
@@ -188,6 +189,7 @@ class GraspServer(object):
 if __name__ == "__main__":
 
     graspGenerator = GraspServer()
+    print("Grasp generator is ready")
 
     while not rospy.is_shutdown():
         rospy.spin()

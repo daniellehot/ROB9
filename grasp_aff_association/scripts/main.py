@@ -18,7 +18,7 @@ from tf.transformations import euler_from_quaternion, quaternion_from_euler, qua
 # ROB9
 from cameraService.cameraClient import CameraClient
 from affordanceService.client import AffordanceClient
-from graspGenerator.client import GraspingGeneratorClient
+from grasp_service.client import GraspingGeneratorClient
 import rob9Utils.transformations as transform
 from grasp_pose.srv import *
 
@@ -262,13 +262,14 @@ def handle_get_grasps(req):
         graspClient.setSettings(collision_thresh, num_view, score_thresh, voxel_size)
 
         # Load the network with GPU (True or False) or CPU
-        graspClient.start(GPU=False)
+        graspClient.start(GPU=True)
 
         graspData = graspClient.getGrasps()
 
         print('Getting affordance results...')
         affClient = AffordanceClient()
         affClient.start(GPU=False)
+        _ = affClient.run(CONF_THRESHOLD = 0.3)
 
         _, _ = affClient.getAffordanceResult(CONF_THRESHOLD = 0.3)
         affClient.processMasks(conf_threshold = 40, erode_kernel = (7,7))

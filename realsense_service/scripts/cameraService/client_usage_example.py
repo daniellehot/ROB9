@@ -8,13 +8,16 @@ import rospy
 from realsense_service.srv import *
 import numpy as np
 import cv2
+import open3d as o3d
 from cv_bridge import CvBridge
 from cameraClient import CameraClient
 
 if __name__ == "__main__":
 
+    print("Starting")
     cam = CameraClient(type = "realsenseD435")
 
+    print("Capture new scene")
     cam.captureNewScene()
 
     cam.getRGB()
@@ -28,3 +31,9 @@ if __name__ == "__main__":
     cam.getUvStatic()
     print(cam.uv.shape)
     print(cam.uv[0:10])
+
+    cloud, rgb = cam.getPointCloudStatic()
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(cloud)
+    pcd.colors = o3d.utility.Vector3dVector(rgb)
+    o3d.visualization.draw_geometries([pcd])
