@@ -2,6 +2,8 @@
 <launch>
   <include file="$(find our_moveit_config)/launch/demo.launch"/>
 
+  <rosparam file="$(find rob9)/config/trajectory_params.yaml"/>
+
   <node name="robotiq_robot_controller" pkg="robotiq_3f_gripper_control" type="Robotiq3FGripperTcpNode.py" args="192.168.1.140"/>
   <node name="gripper_controller" pkg="moveit_scripts" type="gripper_controller.py"/>
   <node pkg="tf2_ros" type="static_transform_publisher" name="ptu_real_frame_broadcaster" args="-0.034 -0.199 1.845 0.972 0.0 0.0 -0.233 world ptu_camera_color_optical_frame_real" />
