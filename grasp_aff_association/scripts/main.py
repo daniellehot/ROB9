@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 
 import sys
 import numpy as np
@@ -9,6 +9,7 @@ import open3d as o3d
 
 import rospy
 from nav_msgs.msg import Path
+import geometry_msgs
 from geometry_msgs.msg import PoseStamped, Pose
 import tf2_ros
 import tf2_geometry_msgs
@@ -20,7 +21,7 @@ from cameraService.cameraClient import CameraClient
 from affordanceService.client import AffordanceClient
 from grasp_service.client import GraspingGeneratorClient
 import rob9Utils.transformations as transform
-from grasp_pose.srv import *
+from grasp_aff_association.srv import *
 
 # Merge list of masks, return as one greyscale image mask
 def merge_masks(masks, ids=[], visualize=False):
@@ -114,116 +115,122 @@ def fuse_grasp_affordance(cloud_masked, grasps_data, visualize=False, search_dis
     viz_cloud, _ = viz_cloud.remove_statistical_outlier(nb_neighbors=10, std_ratio=2.0)
 
     cloud_masked = np.array(cloud_masked)
+    #print(cloud_masked)
+    #print(cloud_masked.shape)
+    if cloud_masked.shape[0] > 4:
 
-    bbox3d = o3d.geometry.OrientedBoundingBox.create_from_points(points=viz_cloud.points)
-    box_corners = bbox3d.get_box_points()
+        bbox3d = o3d.geometry.OrientedBoundingBox.create_from_points(points=viz_cloud.points)
+        box_corners = bbox3d.get_box_points()
 
-    # Find min and max points from exstracted pointcloud, could check for outliers
-    cloud_masked = np.array(cloud_masked)
-    point_min = [np.min(cloud_masked[:, 0]), np.min(cloud_masked[:, 1]), np.min(cloud_masked[:, 2])]
-    point_max = [np.max(cloud_masked[:, 0]), np.max(cloud_masked[:, 1]), np.max(cloud_masked[:, 2])]
-    # Visualize bbox around point cloud
-    bbox_cloud = viz_boundingbox(point_min, point_max)
-    # print('Point min and max: ')
-    # print(point_min)
-    # print(point_max)
+        # Find min and max points from exstracted pointcloud, could check for outliers
+        cloud_masked = np.array(cloud_masked)
+        point_min = [np.min(cloud_masked[:, 0]), np.min(cloud_masked[:, 1]), np.min(cloud_masked[:, 2])]
+        point_max = [np.max(cloud_masked[:, 0]), np.max(cloud_masked[:, 1]), np.max(cloud_masked[:, 2])]
+        # Visualize bbox around point cloud
+        bbox_cloud = viz_boundingbox(point_min, point_max)
+        # print('Point min and max: ')
+        # print(point_min)
+        # print(point_max)
 
-    # Find grasps close to area of interestgraspnet_msg = Bool()
-    search_max = [x + search_dist for x in point_max]
-    search_min = [x - search_dist for x in point_min]
-    # Visualize bbox around search area for nearby grasps
-    bbox_search = viz_boundingbox(search_min, search_max)
-    # print('Min and max search area for nearby grasps: ')
-    # print(search_min)
-    # print(search_max)
+        # Find grasps close to area of interestgraspnet_msg = Bool()
+        search_max = [x + search_dist for x in point_max]
+        search_min = [x - search_dist for x in point_min]
+        # Visualize bbox around search area for nearby grasps
+        bbox_search = viz_boundingbox(search_min, search_max)
+        # print('Min and max search area for nearby grasps: ')
+        # print(search_min)
+        # print(search_max)
 
-    # Find nearby grasps
-    grasp_nearby = []
-    grasp_nearby_pos = []
-    for grasp_pose in grasps_data:
-        pos = [grasp_pose.pose.position.x, grasp_pose.pose.position.y, grasp_pose.pose.position.z]
-        if search_min[0] < pos[0] < search_max[0]:
-            if search_min[1] < pos[1] < search_max[1]:
-                if search_min[2] < pos[2] < search_max[2]:
-                    grasp_nearby.append(grasp_pose)
-                    grasp_nearby_pos.append(pos)
+        # Find nearby grasps
+        grasp_nearby = []
+        grasp_nearby_pos = []
+        for grasp_pose in grasps_data:
+            pos = [grasp_pose.pose.position.x, grasp_pose.pose.position.y, grasp_pose.pose.position.z]
+            if search_min[0] < pos[0] < search_max[0]:
+                if search_min[1] < pos[1] < search_max[1]:
+                    if search_min[2] < pos[2] < search_max[2]:
+                        grasp_nearby.append(grasp_pose)
+                        grasp_nearby_pos.append(pos)
 
-    # Create and vizualize direction vectors
-    viz_grasp_dir = o3d.geometry.LineSet()
-    lines_to_viz = []
-    points_to_viz = []
-    end_points = []
-    for i, grasp in enumerate(grasp_nearby):
-        point = [grasp.pose.position.x, grasp.pose.position.y, grasp.pose.position.z]
-        quat = [grasp.pose.orientation.x, grasp.pose.orientation.y, grasp.pose.orientation.z,
-                grasp.pose.orientation.w]
+        # Create and vizualize direction vectors
+        viz_grasp_dir = o3d.geometry.LineSet()
+        lines_to_viz = []
+        points_to_viz = []
+        end_points = []
+        for i, grasp in enumerate(grasp_nearby):
+            point = [grasp.pose.position.x, grasp.pose.position.y, grasp.pose.position.z]
+            quat = [grasp.pose.orientation.x, grasp.pose.orientation.y, grasp.pose.orientation.z,
+                    grasp.pose.orientation.w]
 
-        vec = [1, 0, 0]
-        direction = qv_mult(quat, vec)
-        length = np.linalg.norm(direction)
-        direction = direction / length * vec_length
-        point2 = [point[0]+direction[0], point[1]+direction[1], point[2]+direction[2]]
+            vec = [1, 0, 0]
+            direction = qv_mult(quat, vec)
+            length = np.linalg.norm(direction)
+            direction = direction / length * vec_length
+            point2 = [point[0]+direction[0], point[1]+direction[1], point[2]+direction[2]]
 
-        end_points.append(point2)
-        points_to_viz.append(point)
-        points_to_viz.append(point2)
-        lines_to_viz.append([0 + 2 * i, 1 + 2 * i])
+            end_points.append(point2)
+            points_to_viz.append(point)
+            points_to_viz.append(point2)
+            lines_to_viz.append([0 + 2 * i, 1 + 2 * i])
 
-    colors = [[1, 0, 0] for i in range(len(lines_to_viz))]
-    viz_grasp_dir.points = o3d.utility.Vector3dVector(points_to_viz)
-    viz_grasp_dir.lines = o3d.utility.Vector2iVector(lines_to_viz)
-    viz_grasp_dir.colors = o3d.utility.Vector3dVector(colors)
+        colors = [[1, 0, 0] for i in range(len(lines_to_viz))]
+        viz_grasp_dir.points = o3d.utility.Vector3dVector(points_to_viz)
+        viz_grasp_dir.lines = o3d.utility.Vector2iVector(lines_to_viz)
+        viz_grasp_dir.colors = o3d.utility.Vector3dVector(colors)
 
-    # Visualize grasp points
-    viz_grasp_points = viz_color_pointcloud(grasp_nearby_pos, color=[0, 0, 1])
+        # Visualize grasp points
+        viz_grasp_points = viz_color_pointcloud(grasp_nearby_pos, color=[0, 0, 1])
 
-    # Check which grasps point at desired object/affordance
-    interpol_points = []
-    for point, end_point in zip(grasp_nearby_pos, end_points):
-        interpol = []
-        x_diff = (point[0] - end_point[0]) / steps
-        y_diff = (point[1] - end_point[1]) / steps
-        z_diff = (point[2] - end_point[2]) / steps
-        for i in range(1, steps + 1):
-            interpol.append([point[0] - x_diff * i, point[1] - y_diff * i, point[2] - z_diff * i])
-        interpol_points.append(interpol)
-    # print('Interpolation points: ')
-    # print(interpol_points)
+        # Check which grasps point at desired object/affordance
+        interpol_points = []
+        for point, end_point in zip(grasp_nearby_pos, end_points):
+            interpol = []
+            x_diff = (point[0] - end_point[0]) / steps
+            y_diff = (point[1] - end_point[1]) / steps
+            z_diff = (point[2] - end_point[2]) / steps
+            for i in range(1, steps + 1):
+                interpol.append([point[0] - x_diff * i, point[1] - y_diff * i, point[2] - z_diff * i])
+            interpol_points.append(interpol)
+        # print('Interpolation points: ')
+        # print(interpol_points)
 
-    # Find points in bbox
-    good_grasp = []
-    interpol_viz_true = []
-    interpol_viz_false = []
-    for i, point_list in enumerate(interpol_points):
-        grasp_intersects = False
-        point_list = np.array(point_list)
-        outside_bbox = inside_cube_test(point_list, box_corners)  # Returns point indecies outside box
+        # Find points in bbox
+        good_grasp = []
+        interpol_viz_true = []
+        interpol_viz_false = []
+        for i, point_list in enumerate(interpol_points):
+            grasp_intersects = False
+            point_list = np.array(point_list)
+            outside_bbox = inside_cube_test(point_list, box_corners)  # Returns point indecies outside box
 
-        for idx in range(len(point_list)):
-            in_bbox = True
-            for index in outside_bbox:
-                if idx == index:
-                    in_bbox = False
+            for idx in range(len(point_list)):
+                in_bbox = True
+                for index in outside_bbox:
+                    if idx == index:
+                        in_bbox = False
 
-            if in_bbox:
-                interpol_viz_true.append(point_list[idx])
-                grasp_intersects = True
-            else:
-                interpol_viz_false.append(point_list[idx])
-        if grasp_intersects:
-            good_grasp.append(grasp_nearby[i])
+                if in_bbox:
+                    interpol_viz_true.append(point_list[idx])
+                    grasp_intersects = True
+                else:
+                    interpol_viz_false.append(point_list[idx])
+            if grasp_intersects:
+                good_grasp.append(grasp_nearby[i])
 
-    # Visualize points from grasp contained in bbox
-    viz_interpol_true = viz_color_pointcloud(interpol_viz_true, color=[0, 1, 0])
-    # Visualize points from grasp not contained in bbox
-    viz_interpol_false = viz_color_pointcloud(interpol_viz_false, color=[1, 0, 0])
+        # Visualize points from grasp contained in bbox
+        viz_interpol_true = viz_color_pointcloud(interpol_viz_true, color=[0, 1, 0])
+        # Visualize points from grasp not contained in bbox
+        viz_interpol_false = viz_color_pointcloud(interpol_viz_false, color=[1, 0, 0])
 
-    # Visualize
-    if visualize:
-        o3d.visualization.draw_geometries([viz_cloud, bbox3d, bbox_search, viz_grasp_dir, viz_grasp_points, viz_interpol_true, viz_interpol_false])
+        # Visualize
+        if visualize:
+            o3d.visualization.draw_geometries([viz_cloud, bbox3d, bbox_search, viz_grasp_dir, viz_grasp_points, viz_interpol_true, viz_interpol_false])
 
-    return good_grasp
-
+        #print(good_grasp)
+        #print(type(good_grasp))
+        return good_grasp
+    else:
+        return []
 
 def qv_mult(q1, v1):
     v1 = unit_vector(v1)
@@ -248,7 +255,7 @@ def handle_get_grasps(req):
 
         # Get point cloud and uv indexes for translating from image to point
         # cloud.
-        cloud = cam.getPointCloudStatic()
+        cloud, _ = cam.getPointCloudStatic()
         cloud_idx = cam.getUvStatic()
 
         # Get grasps from grasp generator
@@ -268,22 +275,22 @@ def handle_get_grasps(req):
 
         print('Getting affordance results...')
         affClient = AffordanceClient()
-        affClient.start(GPU=False)
-        _ = affClient.run(CONF_THRESHOLD = 0.3)
+        #affClient.start(GPU=False)
+        #_ = affClient.run(CONF_THRESHOLD = 0.3)
 
-        _, _ = affClient.getAffordanceResult(CONF_THRESHOLD = 0.3)
+        _, _ = affClient.getAffordanceResult()
         affClient.processMasks(conf_threshold = 40, erode_kernel = (7,7))
 
         masks = affClient.masks
         objects = affClient.objects
-
+        """
         print('Waiting for grasps from graspnet...')
         while not rospy.is_shutdown():
             if cloud is None:
                 print("Waiting for point cloud...")
             if cloud_idx is None:
                 print("Waiting for uv coordinates...")
-            if grasp_data is None:
+            if graspData is None:
                 print("Waiting for grasp service...")
             if masks is None or objects is None:
                 print("Waiting for affordance service...")
@@ -292,6 +299,8 @@ def handle_get_grasps(req):
                 break
             rate.sleep()
 
+        """
+        print(cloud_idx)
         # run through all objects found by affordance net
         graspObjects = []
         for obj_idx, mask in enumerate(masks):

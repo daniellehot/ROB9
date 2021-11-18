@@ -41,7 +41,7 @@ class GraspingGeneratorClient(object):
         response = graspGeneratorService(msg)
 
         self.grasps = response.grasps
-        return self.grasps
+        return self.grasps.poses
 
     def setSettings(self, collision_thresh = 0.01, num_view = 300, score_thresh = 0.0, voxel_size = 0.2):
 

@@ -1,4 +1,5 @@
 import rospy
+import geometry_msgs
 from geometry_msgs.msg import PoseStamped, Pose
 import tf2_ros
 import tf2_geometry_msgs
@@ -13,7 +14,7 @@ def transformToFrame(tf_buffer, pose, orignalFrame, newFrame):
                 originalFrame - current frame of pose
                 newFrame - desired frame for pose to be transformed into.
         output: transformed_pose_msg - pose in newFrame """
-        
+
     pose.header.stamp = rospy.Time.now()
     transformed_pose_msg = geometry_msgs.msg.PoseStamped()
     tf_buffer.lookup_transform(orignalFrame, newFrame, rospy.Time.now(), rospy.Duration(1))
