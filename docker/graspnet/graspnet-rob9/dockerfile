@@ -36,7 +36,7 @@ RUN pip install pyyaml rospkg pyrealsense2 numpy scikit-build
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 ARG INCUBATOR_VER=unknown
 WORKDIR /ROB9/src
-COPY grasping /ROB9/src/grasping
+COPY graspGenerator /ROB9/src/graspGenerator
 COPY realsense_service /ROB9/src/realsense_service
 COPY rob9 /ROB9/src/rob9
 WORKDIR /ROB9

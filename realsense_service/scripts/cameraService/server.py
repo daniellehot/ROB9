@@ -68,7 +68,7 @@ class RealsenseServer(object):
         self.serviceCaptureDepth = rospy.Service(self.baseService + '/depth', depth, self.serviceSendDepthImageStatic)
         self.serviceCaptureRGB = rospy.Service(self.baseService + '/rgb', rgb, self.serviceSendRGBImageStatic)
         self.serviceUVStatic = rospy.Service(self.baseService + '/pointcloud/static/uv', uvSrv, self.serviceUVStatic)
-        self.servicePointCloudStatic = rospy.Service(self.baseService + '/pointcloud/static/geometry', pointcloud, self.servicePointCloud)
+        self.servicePointCloudStatic = rospy.Service(self.baseService + '/pointcloud/static', pointcloud, self.servicePointCloud)
 
 
         self.pubPointCloudGeometryStatic = rospy.Publisher(self.baseService + "/pointcloudGeometry/static", PointCloud2, queue_size=1)
@@ -225,8 +225,10 @@ class RealsenseServer(object):
         header = Header()
         header.stamp = rospy.Time.now()
         header.frame_id = "ptu_camera_color_optical_frame"
-        return pc2.create_cloud(header, self.FIELDS_XYZ, self.cloudGeometryStatic)
-
+        msg = pointcloudResponse()
+        msg.pc = pc2.create_cloud(header, self.FIELDS_XYZ, self.cloudGeometryStatic)
+        msg.color.data = camera.cloudColorStatic
+        return msg
 
     def updateStatic(self, capture):
         """ Sets static information to latest images and point clouds captured """
