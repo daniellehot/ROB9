@@ -9,7 +9,6 @@ from std_msgs.msg import Int8
 def main():
     #list_microphones()
 
-    global text
     tool_ids = {
         'bowl': 1,
         'tvm': 2,
@@ -31,7 +30,7 @@ def main():
         while not rospy.is_shutdown():
             text = None
 
-            while text == None:
+            while text is None:
                 text = speech_to_text()
                 print('Text gotten from audio: ' + '\n' + str(text))
 
