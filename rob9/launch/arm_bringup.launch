@@ -35,6 +35,8 @@
   <!-- <node name="move_to_goal" pkg="moveit_scripts" type="move_to_goal.py" output="screen"/> -->
   <node name="frame_publisher" pkg="moveit_scripts" type="frame_publisher.py" output="screen"/>
 
+  <rosparam file="$(find rob9)/config/trajectory_params.yaml"/>
+
 
   <!-- <node name="affordancenet" pkg="rob9" type="affordancenet.sh" required="false"/> -->
   <!-- <node name="graspnet" pkg="rob9" type="graspnet.sh" required="false"/> -->

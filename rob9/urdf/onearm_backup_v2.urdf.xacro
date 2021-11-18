@@ -108,18 +108,17 @@
     <origin xyz="0 0 0" rpy="0 0 0" />
   </xacro:sensor_d435>
 
-  <!-- <box size="0.4 0.4 0.4345"/> -->
   <link name="top_table">
     <visual>
       <geometry>
-        <box size="0.4 0.4 0.43"/>
+        <box size="0.4 0.4 0.4345"/>
       </geometry>
       <origin rpy="0 0 0" xyz="0 0 0.0"/>
-      <material name="aluminum"/>
+      <material name="blue"/>
     </visual>
     <collision>
       <geometry>
-        <box size="0.4 0.4 0.43"/>
+        <box size="0.4 0.4 0.4345"/>
       </geometry>
       <origin rpy="0 0 0" xyz="0 0 0.0"/>
     </collision>
@@ -130,28 +129,6 @@
     <child link="top_table"/>
     <origin xyz="0 0 0.717" rpy="0 0 0"/>
   </joint>
----------------------------------------------
----------------------------------------------
---------------------------------------------
-<link name="connector_box_camera">
-  <visual>
-    <geometry>
-      <box size="0.05 0.05 0.05"/>
-    </geometry>
-    <origin rpy="0 0 0" xyz="0 0 0.0"/>
-  </visual>
-  <collision>
-    <geometry>
-      <box size="0.05 0.05 0.05"/>
-    </geometry>
-    <origin rpy="0 0 0" xyz="0 0 0.0"/>
-  </collision>
-</link>
 
-<joint name="connector_box_camera" type="fixed">
-  <parent link="ptu_camera_right_ir_frame"/>
-  <child link="connector_box_camera"/>
-  <origin xyz="0 0 0" rpy="0 0 0"/>
-</joint>
 
 </robot>

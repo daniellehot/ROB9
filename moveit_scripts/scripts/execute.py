@@ -5,7 +5,7 @@ import rospy
 
 from moveit_scripts.srv import *
 from moveit_scripts.msg import *
-from grasp_pose.srv import *
+from grasp_aff_association.srv import *
 
 import moveit_commander
 import moveit_msgs
@@ -31,8 +31,24 @@ def move_to_ready():
     plan = move_group.go(wait=True)
     move_group.stop()
     move_group.clear_pose_targets()
+    gripper_pub.publish(open_gripper_msg)
+    print("Done")
+
+def move_to_handover():
+    print("Moving to pre-handover pose")
+    move_group.set_named_target("ready")
+    plan = move_group.go(wait=True)
+    move_group.stop()
+    move_group.clear_pose_targets()
+
+    print("Moving to handover pose")
+    move_group.set_named_target("handover")
+    plan = move_group.go(wait=True)
+    move_group.stop()
+    move_group.clear_pose_targets()
     #gripper_pub.publish(open_gripper_msg)
     print("Done")
+
 
 def send_trajectory_to_rviz(plan):
     print("Trajectory was sent to RViZ")
@@ -49,8 +65,8 @@ def send_trajectory_to_rviz(plan):
 def callback(msg):
     global resp_trajectories
     #global receivedGripperCommand
-    print("Callback")
-    print("message data " + str(msg.data))
+    #print("Callback")
+    #print("message data " + str(msg.data))
     id = msg.data
     id = str(id)
     plans = []
@@ -63,8 +79,8 @@ def callback(msg):
         if resp_trajectories.trajectories_poses.poses[i].header.frame_id == id:
             goal_poses.append(resp_trajectories.trajectories_poses.poses[i])
 
-    print("I have sampled these trajectories "  + str(len(plans)))
-    print("I have sampled these goal poses "  + str(len(goal_poses)))
+    #print("I have sampled these trajectories "  + str(len(plans)))
+    #print("I have sampled these goal poses "  + str(len(goal_poses)))
 
     waypoint_msg = geometry_msgs.msg.PoseStamped()
     waypoint_msg.header.frame_id = "world"
@@ -95,6 +111,8 @@ def callback(msg):
     #    gripper_pub.publish(close_gripper_msg)
     #    rate.sleep()
     #rospy.sleep(4.)
+    raw_input("Press Enter when you are ready to move the robot to the handover pose")
+    move_to_handover()
     raw_input("Press Enter when you are ready to move the robot back to the ready pose")
     move_to_ready()
 
@@ -161,8 +179,17 @@ if __name__ == '__main__':
     resp_grasps = get_grasps(demo)
     print("Calling the trajectory service")
     resp_trajectories = get_trajectories(resp_grasps.grasps)
-    print("I have received a trajectory server response "  + str(len(resp_trajectories.trajectories.trajectories)))
-    print("I have received goal poses response "  + str(len(resp_trajectories.trajectories_poses.poses)))
+    print("I have received a trajectory server response ")
+
+    id_list_duplicates = []
+    for i in range(len(resp_trajectories.trajectories.trajectories)):
+        id_list_duplicates.append(resp_trajectories.trajectories.trajectories[i].joint_trajectory.header.frame_id)
+    id_list = list(dict.fromkeys(id_list_duplicates))
+    print("id_list_duplicates " + str(id_list_duplicates))
+    print("id_list " + str(id_list))
+
+    #print("I have received a trajectory server response "  + str(len(resp_trajectories.trajectories.trajectories)))
+    #print("I have received goal poses response "  + str(len(resp_trajectories.trajectories_poses.poses)))
     #print(resp_trajectories.trajectories_poses.header)
     #print("----------------------------")
     #print("----------------------------")
