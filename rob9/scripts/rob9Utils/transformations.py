@@ -1,5 +1,6 @@
 import rospy
 import geometry_msgs
+import numpy as np
 from geometry_msgs.msg import PoseStamped, Pose
 import tf2_ros
 import tf2_geometry_msgs

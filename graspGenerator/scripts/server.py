@@ -7,16 +7,19 @@ import rospy
 import numpy as np
 import scipy.io as scio
 from ctypes import * # convert float to uint32
-from cv_bridge import CvBridge
 
 from nav_msgs.msg import Path
 from graspnetAPI import GraspGroup
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Pose
 from scipy.spatial.transform import Rotation
-from std_msgs.msg import Header
+from std_msgs.msg import Header, Float32
 
 from grasp_generator.srv import *
+from rob9.msg import *
+from rob9.srv import *
 from cameraService.cameraClient import CameraClient
+#from rob9Utils.graspGroup import GraspGroup as rob9GraspGroup
+#from rob9Utils.grasp import Grasp as rob9Grasp
 
 ROOT_DIR = '/graspnet/graspnet-baseline/'  # path to graspnet-baseline
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
@@ -98,8 +101,6 @@ class GraspServer(object):
         gg = self.remove_grasps_under_score(gg, self.score_thresh) #  Score range between 0 and 2. Under 0.1 bad, over 0.7 good
 
         print("Computed grasps, now sending...")
-        #msg = startGraspingSrvResponse()
-        #msg.Path = self.generate_ros_message(gg)
 
         return self.generate_ros_message(gg)
 
@@ -142,34 +143,42 @@ class GraspServer(object):
     def generate_ros_message(self, gg):
 
         grasps = gg
-
-        grasps_msg = Path()
-        grasps_msg.header.stamp = rospy.Time.now()
-        grasps_msg.header.frame_id = "Header"
-
         seq = 0
+
+        #graspGroup = rob9GraspGroup()
+        graspGroupMsg = GraspGroupMsg()
+        graspList = []
+
         for grap in grasps:
 
-            grasp = PoseStamped()
-            grasp.header.stamp = rospy.Time.now()
-            grasp.header.frame_id = str(grap.score)
-            grasp.header.seq = seq
+            header = Header()
+            header.stamp = rospy.Time.now()
+            header.frame_id = str("ptu_camera_color_optical_frame_real")
+            header.seq = seq
             seq += 1
 
-            grasp.pose.position.x = grap.translation[0]
-            grasp.pose.position.y = grap.translation[1]
-            grasp.pose.position.z = grap.translation[2]
+            pose = Pose()
+            pose.position.x = grap.translation[0]
+            pose.position.y = grap.translation[1]
+            pose.position.z = grap.translation[2]
 
             rot = Rotation.from_matrix(grap.rotation_matrix)
             quat = rot.as_quat()
-            grasp.pose.orientation.x = quat[0]
-            grasp.pose.orientation.y = quat[1]
-            grasp.pose.orientation.z = quat[2]
-            grasp.pose.orientation.w = quat[3]
+            pose.orientation.x = quat[0]
+            pose.orientation.y = quat[1]
+            pose.orientation.z = quat[2]
+            pose.orientation.w = quat[3]
 
-            grasps_msg.poses.append(grasp)
+            m = GraspMsg()
+            m.score.data = grap.score
+            m.header = header
+            m.pose = pose
 
-        return grasps_msg
+            graspList.append(m)
+
+        graspGroupMsg.grasps = graspList
+
+        return graspGroupMsg
 
     def remove_grasps_under_score(self, gg, score_thresh):
         gg.sort_by_score()

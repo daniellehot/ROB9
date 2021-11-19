@@ -57,7 +57,7 @@ catkin_python_setup()
 
 add_service_files(
   FILES
-  runGraspingSrv.srv
+  #runGraspingSrv.srv
   setSettingsGraspingSrv.srv
   startGraspingSrv.srv
 )
