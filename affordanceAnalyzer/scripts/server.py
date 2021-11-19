@@ -154,10 +154,10 @@ class AffordanceAnalyzer(object):
         if not os.path.isfile(caffemodel):
             raise IOError(('{:s} not found.\n').format(caffemodel))
 
-        GPU = msg.GPU
+        GPU = msg.GPU.data
         if GPU:
-            caffe.set_device(0)
             caffe.set_mode_gpu()
+            caffe.set_device(0)
         else:
             caffe.set_mode_cpu()
 

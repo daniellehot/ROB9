@@ -3,7 +3,6 @@ import rospy
 from realsense_service.srv import *
 import numpy as np
 import cv2
-from cv_bridge import CvBridge
 import sensor_msgs.point_cloud2 as pc2
 
 class CameraClient(object):
@@ -64,7 +63,6 @@ class CameraClient(object):
         msg = depth()
         msg.data = True
         response = depthService(msg)
-        br = CvBridge()
         img = np.frombuffer(response.img.data, dtype=np.float16).reshape(response.img.height, response.img.width, -1)
         self.depth = img
         return self.depth
