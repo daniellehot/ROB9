@@ -186,14 +186,14 @@ def handle_get_grasps(req):
         graspClient.start(GPU=True)
 
         graspData = graspClient.getGrasps()
-        graspData.thresholdByScore(0.1)
+        graspData.thresholdByScore(0.3)
 
-        print("Got ", len(graspData), " grasps")
+        print("Got ", len(graspData), " grasps, v2")
 
         print('Getting affordance results...')
         affClient = AffordanceClient()
-        affClient.start(GPU=False)
-        _ = affClient.run(CONF_THRESHOLD = 0.3)
+        #affClient.start(GPU=False)
+        #_ = affClient.run(CONF_THRESHOLD = 0.5)
 
         _, _ = affClient.getAffordanceResult()
         affClient.processMasks(conf_threshold = 40, erode_kernel = (7,7))
@@ -202,7 +202,8 @@ def handle_get_grasps(req):
         objects = affClient.objects
 
         # run through all objects found by affordance net
-        graspObjects = GraspGroup()
+        graspObjects = GraspGroup(grasps = [])
+
         affordance_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9]
         obj_instance = 1
 
@@ -215,14 +216,17 @@ def handle_get_grasps(req):
                         cloud_masked.append(cloud[k])
                 cloud_masked = np.array(cloud_masked)
 
-                associated_grasps = GraspGroup(grasps = fuse_grasp_affordance(cloud_masked, graspData, visualize=False))
+                #associated_grasps = GraspGroup(grasps = fuse_grasp_affordance(cloud_masked, graspData, visualize=False))
+                associated_grasps_list = fuse_grasp_affordance(cloud_masked, graspData, visualize=False)
+                if len(associated_grasps_list) > 0:
+                    associated_grasps = GraspGroup(grasps = associated_grasps_list)
 
-                associated_grasps.setToolId(int(objects[i]))
-                print(int(objects[i]))
-                associated_grasps.setAffordanceID(affordance_id)
-                associated_grasps.setObjectInstance(obj_instance)
+                    associated_grasps.setToolId(int(objects[i]))
+                    associated_grasps.setAffordanceID(affordance_id)
+                    associated_grasps.setObjectInstance(obj_instance)
 
-                graspObjects = graspObjects.combine(associated_grasps)
+                    graspObjects = graspObjects.combine(associated_grasps)
+                    print(len(associated_grasps), len(graspObjects))
 
             print('Nr. of grasps found: ' + str(len(graspObjects.getGraspsByInstance(obj_instance))) + '  For object class: ' + str(objects[i]))
             obj_instance += 1
