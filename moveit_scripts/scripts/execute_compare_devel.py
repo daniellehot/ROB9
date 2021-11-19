@@ -15,6 +15,7 @@ import moveit_msgs
 #from moveit_msgs.msg import PositionIKRequest, RobotState, MoveItErrorCodes
 import geometry_msgs.msg
 from geometry_msgs.msg import Pose, PoseStamped, PoseArray
+from nav_msgs.msg import Path
 import std_msgs.msg
 from std_msgs.msg import Int8
 from math import pi
@@ -84,6 +85,8 @@ def compare_current_and_start_state(robot_trajectory_msg):
         move_group.clear_pose_targets()
 
 
+
+
 def send_trajectory_to_rviz(plan):
     print("Trajectory was sent to RViZ")
     display_trajectory = moveit_msgs.msg.DisplayTrajectory()
@@ -92,13 +95,19 @@ def send_trajectory_to_rviz(plan):
     display_trajectory_publisher.publish(display_trajectory)
 
 
-def callback(msg):
-    global resp_trajectories
-    #global receivedGripperCommand
-    #print("Callback")
-    #print("message data " + str(msg.data))
-    id = msg.data
+def rosbag_callback(path_msg):
+    print("rosbag_callback")
+    resp_trajectories = get_trajectories(path_msg)
+    id = tool_id
     id = str(id)
+
+    id_list_duplicates = []
+    for i in range(len(resp_trajectories.trajectories.trajectories)):
+        id_list_duplicates.append(resp_trajectories.trajectories.trajectories[i].joint_trajectory.header.frame_id)
+    id_list = list(dict.fromkeys(id_list_duplicates))
+    print("id_list_duplicates " + str(id_list_duplicates))
+    print("id_list " + str(id_list))
+
     plans = []
     goal_poses = []
     for i in range(len(resp_trajectories.trajectories.trajectories)):
@@ -124,7 +133,6 @@ def callback(msg):
     goal_msg.pose = goal_poses[1].pose
     pub_grasp.publish(goal_msg)
 
-    #rospy.sleep(6.)
     for i in range(2):
         compare_current_and_start_state(plans[i])
         send_trajectory_to_rviz(plans[i])
@@ -132,7 +140,16 @@ def callback(msg):
         move_group.execute(plans[i], wait=True)
         move_group.stop()
         move_group.clear_pose_targets()
-    gripper_pub.publish(close_gripper_msg)
+
+    #receivedGripperCommand = False
+    #rate = rospy.Rate(10)
+    #subGrupper = rospy.Subscriber("gripper_controller", Int8, callbackGripper)
+    #gripper_pub.publish(close_gripper_msg)
+
+    #while receivedGripperCommand == False:
+    #    gripper_pub.publish(close_gripper_msg)
+    #    rate.sleep()
+    #rospy.sleep(4.)
     raw_input("Press Enter when you are ready to move the robot to the handover pose")
     move_to_handover()
     raw_input("Press Enter when you are ready to move the robot back to the ready pose")
@@ -140,84 +157,34 @@ def callback(msg):
 
 
 if __name__ == '__main__':
-    demo = std_msgs.msg.Bool()
-    demo.data = False
+    tool_id = -1
     if len(sys.argv) > 1:
-        if sys.argv[1] == 'demo':
-            demo.data = True
-            print("Demo = True")
+        tool_id = int(sys.argv[1])
+        if isinstance(tool_id, int):
+            print("tool_id = " + str(tool_id))
         else:
             print("Invalid input argument")
             exit()
 
-    print("Init")
-    rospy.init_node('moveit_subscriber', anonymous=True)
-    rospy.Subscriber('tool_id', Int8, callback)
-    gripper_pub = rospy.Publisher('gripper_controller', Int8, queue_size=10, latch=True)
+    print("Init execute_compare_devel")
+    rospy.init_node('execute_compare_devel', anonymous=True)
+    rospy.Subscriber('Daniel', Path, rosbag_callback)
     pub_grasp = rospy.Publisher('pose_to_reach', PoseStamped, queue_size=10)
     pub_waypoint = rospy.Publisher('pose_to_reach_waypoint', PoseStamped, queue_size=10)
-    display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
-                                                   moveit_msgs.msg.DisplayTrajectory,
-                                                   queue_size=20)
-    # DO NOT REMOVE THIS SLEEP, it allows gripper_pub to establish connection to the topic
+    display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=20)
     rospy.sleep(0.1)
 
     moveit_commander.roscpp_initialize(sys.argv)
     robot = moveit_commander.RobotCommander()
     move_group = moveit_commander.MoveGroupCommander("manipulator")
-    #move_group.set_max_acceleration_scaling_factor(0.1)
-    #move_group.set_max_velocity_scaling_factor(0.1)
-
-
-
 
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
 
-    reset_gripper_msg = std_msgs.msg.Int8()
-    reset_gripper_msg.data = 0
-    activate_gripper_msg = std_msgs.msg.Int8()
-    activate_gripper_msg.data = 1
-    close_gripper_msg = std_msgs.msg.Int8()
-    close_gripper_msg = 2
-    open_gripper_msg = std_msgs.msg.Int8()
-    open_gripper_msg.data = 3
-    basic_gripper_msg = std_msgs.msg.Int8()
-    basic_gripper_msg.data = 4
-    pinch_gripper_msg = std_msgs.msg.Int8()
-    pinch_gripper_msg.data = 5
-
-    gripper_pub.publish(reset_gripper_msg)
-    gripper_pub.publish(activate_gripper_msg)
-    gripper_pub.publish(open_gripper_msg)
-    gripper_pub.publish(pinch_gripper_msg)
-
     print("Services init")
-    rospy.wait_for_service('get_grasps')
     rospy.wait_for_service('get_trajectories')
-    get_grasps = rospy.ServiceProxy('get_grasps', GetGrasps)
     get_trajectories = rospy.ServiceProxy('get_trajectories', GetTrajectories)
-    print("Calling the grasp service")
-    resp_grasps = get_grasps(demo)
-    print("Calling the trajectory service")
-    resp_trajectories = get_trajectories(resp_grasps.grasps)
-    print("I have received a trajectory server response ")
-
-    id_list_duplicates = []
-    for i in range(len(resp_trajectories.trajectories.trajectories)):
-        id_list_duplicates.append(resp_trajectories.trajectories.trajectories[i].joint_trajectory.header.frame_id)
-    id_list = list(dict.fromkeys(id_list_duplicates))
-    print("id_list_duplicates " + str(id_list_duplicates))
-    print("id_list " + str(id_list))
-
-    #print("I have received a trajectory server response "  + str(len(resp_trajectories.trajectories.trajectories)))
-    #print("I have received goal poses response "  + str(len(resp_trajectories.trajectories_poses.poses)))
-    #print(resp_trajectories.trajectories_poses.header)
-    #print("----------------------------")
-    #print("----------------------------")
-    #print("----------------------------")
-    #print(resp_trajectories.trajectories_poses.poses[0])
-
+    print("Waiting in callback")
 
     try:
         rospy.spin()

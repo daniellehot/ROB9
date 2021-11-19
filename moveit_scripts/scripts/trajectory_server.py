@@ -69,7 +69,7 @@ def move_to_goal(path_msg):
     for i in range(len(path_msg.poses)):
         id_list_duplicates.append(path_msg.poses[i].header.frame_id)
     id_list = list(dict.fromkeys(id_list_duplicates))
-    print("id_list_duplicates " + str(id_list_duplicates))
+    print("Received " + str(len(id_list_duplicates)) + " grasps")
     print("id_list " + str(id_list))
 
     #print("Sampling all the grasps into sub-lists according to their id")
@@ -134,7 +134,7 @@ def move_to_goal(path_msg):
                 if i == end_index:
                     print("None of the suggested grasps were valid")
                     #plan = None
-                    robot_trajectories.append(plan)
+                    #robot_trajectories.append(plan)
                 else:
                     #print("poses_length " + str(poses_length) + " index i " + str(i))
                     print("Cannot reach the suggested grasp. Will try different configuration")
@@ -293,6 +293,13 @@ def handle_get_trajectories(req):
     response = GetTrajectoriesResponse()
     response.trajectories = response_trajectories
     response.trajectories_poses = response_poses
+
+    #print("Response \n" +str(response))
+
+    file = open("variable.txt", "w")
+    str_dictionary = repr(response)
+    file.write(str_dictionary)
+    file.close()
 
     return response
 
