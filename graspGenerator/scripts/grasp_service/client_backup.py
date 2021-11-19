@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 import rospy
 from grasp_generator.srv import *
-from rob9.msg import *
-from rob9.srv import *
 from std_msgs.msg import Float32, Int32
 from tf.transformations import quaternion_matrix
 import numpy as np
@@ -10,13 +8,13 @@ import cv2
 import open3d as o3d
 import copy
 from cameraService.cameraClient import CameraClient
-from rob9Utils.graspGroup import GraspGroup
 
 class GraspingGeneratorClient(object):
     """docstring for GraspingGeneratorClient."""
 
     def __init__(self):
 
+        self.grasps = None
         self.GPU = False
 
         self.collision_thresh = 0.01 # Collision threshold in collision detection
@@ -42,9 +40,8 @@ class GraspingGeneratorClient(object):
         msg.data = True
         response = graspGeneratorService(msg)
 
-        #m = GraspGroup().fromGraspGroupMsg(response)
-
-        return GraspGroup().fromGraspGroupMsg(response)
+        self.grasps = response.grasps
+        return self.grasps.poses
 
     def setSettings(self, collision_thresh = 0.01, num_view = 300, score_thresh = 0.0, voxel_size = 0.2):
 

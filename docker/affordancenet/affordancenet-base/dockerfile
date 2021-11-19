@@ -2,6 +2,7 @@ FROM nvidia/cuda:10.2-cudnn8-devel-ubuntu18.04
 ENV DEBIAN_FRONTEND noninteractive
 
 # Installing prerequisites
+RUN echo start
 RUN apt-get update --fix-missing
 
 # Compiling and installing Caffe with python support
