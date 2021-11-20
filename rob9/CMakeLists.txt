@@ -59,6 +59,7 @@ add_message_files(
  add_service_files(
    FILES
    runGraspingSrv.srv
+   tf2TransformPoseStampedSrv.srv
  )
 
 ## Generate actions in the 'action' folder

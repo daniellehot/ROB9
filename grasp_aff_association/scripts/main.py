@@ -157,12 +157,13 @@ def fuse_grasp_affordance(points, grasps_data, visualize=False, search_dist=0.1,
     return []
 
 def handle_get_grasps(req):
-    global tf_buffer, tf_listener, rate
+    global rate
 
     if not rospy.is_shutdown():
 
         # initialize the camera client
         cam = CameraClient()
+        pub = rospy.Publisher("/Daniel", Path, queue_size=1)
 
         print('Capturing new scene...')
         cam.captureNewScene()
@@ -192,8 +193,8 @@ def handle_get_grasps(req):
 
         print('Getting affordance results...')
         affClient = AffordanceClient()
-        #affClient.start(GPU=False)
-        #_ = affClient.run(CONF_THRESHOLD = 0.5)
+        affClient.start(GPU=False)
+        _ = affClient.run(CONF_THRESHOLD = 0.5)
 
         _, _ = affClient.getAffordanceResult()
         affClient.processMasks(conf_threshold = 40, erode_kernel = (7,7))
@@ -264,8 +265,8 @@ def handle_get_grasps(req):
 
             # computing waypoint and grasp in world frame
 
-            waypointWorld = Grasp().fromPoseStampedMsg(transform.transformToFrame(tf_buffer, waypointCamera.toPoseStampedMsg(), camera_frame, world_frame))
-            graspWorld = Grasp().fromPoseStampedMsg(transform.transformToFrame(tf_buffer, graspCamera.toPoseStampedMsg(), camera_frame, world_frame))
+            waypointWorld = Grasp().fromPoseStampedMsg(transform.transformToFrame(waypointCamera.toPoseStampedMsg(), world_frame))
+            graspWorld = Grasp().fromPoseStampedMsg(transform.transformToFrame(graspCamera.toPoseStampedMsg(), world_frame))
 
             # computing local cartesian coordinates
             x = waypointWorld.position.x - graspWorld.position.x
@@ -292,10 +293,10 @@ def handle_get_grasps(req):
             grasp_msg = nav_msgs.msg.Path()
             return grasps_msg # in case no grasps can be found, return empty message
 
+        """
         eeWorld = tf_buffer.lookup_transform("world", "right_ee_link", rospy.Time.now(), rospy.Duration(1.0))
         weightedSums = []
 
-        """
         for i in range(len(grasps)):
             deltaRPY = abs(transform.delta_orientation(grasps[i], eeWorld))
             weightedSum = 0.2*deltaRPY[0]+0.4*deltaRPY[1]+0.4*deltaRPY[2]
@@ -322,15 +323,17 @@ def handle_get_grasps(req):
             grasps_msg.poses.append(grasps[i])
             #grasps_msg.poses[-1].header.frame_id = str(grasps[i].header.frame_id)
         print("Sent grasps")
+
+        rospy.sleep(1)
+        pub.publish(grasps_msg)
+
         return grasps_msg
 
 def main():
-    global tf_buffer, tf_listener, rate
+    global rate
     print("Setting up grasp affordance association service...")
 
     rospy.init_node('grasp_affordance_association', anonymous=True)
-    tf_buffer = tf2_ros.Buffer()
-    tf_listener = tf2_ros.TransformListener(tf_buffer)
     grasp_server = rospy.Service('get_grasps', GetGrasps, handle_get_grasps)
 
     rate = rospy.Rate(5)
