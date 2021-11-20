@@ -3,8 +3,6 @@ import rospy
 import numpy as np
 from geometry_msgs.msg import Pose, PoseStamped
 from std_msgs.msg import String, Float32, Int32, Header
-import tf2_ros
-import tf2_geometry_msgs
 import tf_conversions
 from tf.transformations import quaternion_matrix, quaternion_from_matrix
 from rob9.msg import *
@@ -144,9 +142,9 @@ class Grasp(object):
     def setObjectInstance(self, instance):
         self.object_instance = int(instance)
 
-    def transformToFrame(self, tf_buffer, frame_dest):
+    def transformToFrame(self, frame_dest):
         current_pose = self.toPoseStampedMsg()
-        new_f = transform.transformToFrame(tf_buffer, current_pose, current_pose.header.frame_id, frame_dest)
+        new_f = transform.transformToFrame(current_pose, frame_dest)
 
         self.position = Position(x = new_f.pose.position.x, y = new_f.pose.position.y, z = new_f.pose.position.z)
         self.orientation = Orientation(qx = new_f.pose.orientation.x, qy = new_f.pose.orientation.y, qz = new_f.pose.orientation.z, qw = new_f.pose.orientation.w)
@@ -223,8 +221,6 @@ if __name__ == '__main__':
     msg = g.toPoseStampedMsg()
     print(msg)
 
-    tf_buffer = tf2_ros.Buffer()
-    tf_listener = tf2_ros.TransformListener(tf_buffer)
     rospy.sleep(2)
-    g.transformToFrame(tf_buffer, frame_dest="world")
+    g.transformToFrame(frame_dest="world")
     print(g)

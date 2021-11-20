@@ -2,25 +2,26 @@ import rospy
 import geometry_msgs
 import numpy as np
 from geometry_msgs.msg import PoseStamped, Pose
-import tf2_ros
-import tf2_geometry_msgs
+from std_msgs import String
 import tf_conversions
 from tf.transformations import euler_from_quaternion, quaternion_from_euler, quaternion_multiply
+from rob9.srv import tf2TransformPoseStampedSrv, tf2TransformPoseStampedSrvResponse
 
 import math
 
-def transformToFrame(tf_buffer, pose, orignalFrame, newFrame):
-    """ input:  tf_buffer - tf2_ros.Buffer()
-                pose - geometry_msgs.PoseStamped()
-                originalFrame - current frame of pose
+def transformToFrame(pose, newFrame):
+    """ input:  pose - geometry_msgs.PoseStamped()
                 newFrame - desired frame for pose to be transformed into.
         output: transformed_pose_msg - pose in newFrame """
 
     pose.header.stamp = rospy.Time.now()
-    transformed_pose_msg = geometry_msgs.msg.PoseStamped()
-    tf_buffer.lookup_transform(orignalFrame, newFrame, rospy.Time.now(), rospy.Duration(1))
-    transformed_pose_msg = tf_buffer.transform(pose, newFrame)
-    return transformed_pose_msg
+
+    rospy.wait_for_service("/tf2/transformPoseStamped")
+    tf2Service = rospy.ServiceProxy("/tf2/transformPoseStamped", tf2TransformPoseStampedSrv)
+
+    response = tf2Service(pose, String(newFrame))
+
+    return response
 
 
 def cartesianToSpherical(x, y, z):

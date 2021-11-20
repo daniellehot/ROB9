@@ -2,7 +2,6 @@
 import rospy
 import numpy as np
 import cv2
-import open3d as o3d
 from geometry_msgs.msg import Pose, Pose
 from std_msgs.msg import String, Float32, Int32, Header
 from rob9.msg import *
