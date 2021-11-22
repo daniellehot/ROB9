@@ -10,8 +10,7 @@ import open3d as o3d
 import rospy
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped, Pose
-import tf_conversions
-from tf.transformations import quaternion_multiply, quaternion_conjugate, unit_vector
+from rob9Utils.visualize import visualizeGrasps6DOF
 
 # ROB9
 from cameraService.cameraClient import CameraClient
@@ -73,13 +72,23 @@ def inside_cube_test(points , cube3d):
     return list( set().union(res1, res2, res3) )
 
 def qv_mult(q1, v1):
-    v1 = unit_vector(v1)
-    q2 = list(v1)
-    q2.append(0.0)
-    return quaternion_multiply(
-        quaternion_multiply(q1, q2),
-        quaternion_conjugate(q1)
-    )[:3]
+    v1 = v1 / np.linalg.norm(v1)
+
+    # we conjugate q1, so x, y, z = -x, -y, -z
+    x0, y0, z0, w0 = -q1[0], -q1[1], -q1[2], q1[3]
+
+    # other quaternion
+    x1, y1, z1, w1 = v1[0], v1[1], v1[2], 0.0
+
+    # Computer the product of the two quaternions, term by term
+    Q0Q1_w = w0 * w1 - x0 * x1 - y0 * y1 - z0 * z1
+    Q0Q1_x = w0 * x1 + x0 * w1 + y0 * z1 - z0 * y1
+    Q0Q1_y = w0 * y1 - x0 * z1 + y0 * w1 + z0 * x1
+    Q0Q1_z = w0 * z1 + x0 * y1 - y0 * x1 + z0 * w1
+
+    # Create a 4 element array containing the final quaternion
+    final_quaternion = np.array([Q0Q1_x, Q0Q1_y, Q0Q1_z, Q0Q1_w])
+    return final_quaternion[:3]
 
 def fuse_grasp_affordance(points, grasps_data, visualize=False, search_dist=0.1, vec_length=0.08, steps=20):
     """ input:  points - set of 3D points either as list or arrya
@@ -227,7 +236,16 @@ def handle_get_grasps(req):
                     print(len(associated_grasps), len(graspObjects))
 
             print('Nr. of grasps found: ' + str(len(graspObjects.getGraspsByInstance(obj_instance))) + '  For object class: ' + str(objects[i]))
+            cloud, cloudColor = cam.getPointCloudStatic()
+            pcd = o3d.geometry.PointCloud()
+            pcd.points = o3d.utility.Vector3dVector(cloud)
+            pcd.colors = o3d.utility.Vector3dVector(cloudColor)
+            visualizeGrasps6DOF(pcd, GraspGroup(grasps=graspObjects.getGraspsByInstance(obj_instance)))
+
             obj_instance += 1
+
+
+
         print(len(graspObjects), " in total")
 
         camera_frame = "ptu_camera_color_optical_frame"
@@ -236,11 +254,8 @@ def handle_get_grasps(req):
 
         graspObjects.setFrameId(camera_frame)
         print("Sending...")
-        msg = graspObjects.toGraspGroupSrv()
 
-        print(msg)
-
-        return msg
+        return graspObjects.toGraspGroupSrv()
 
 def main():
     global rate
