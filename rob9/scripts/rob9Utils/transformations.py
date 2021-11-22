@@ -2,7 +2,7 @@ import rospy
 import geometry_msgs
 import numpy as np
 from geometry_msgs.msg import PoseStamped, Pose
-from std_msgs import String
+from std_msgs.msg import String
 import tf_conversions
 from tf.transformations import euler_from_quaternion, quaternion_from_euler, quaternion_multiply
 from rob9.srv import tf2TransformPoseStampedSrv, tf2TransformPoseStampedSrvResponse

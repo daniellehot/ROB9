@@ -4,7 +4,8 @@ import numpy as np
 import cv2
 from geometry_msgs.msg import Pose, Pose
 from std_msgs.msg import String, Float32, Int32, Header
-from rob9.msg import *
+from rob9.msg import GraspMsg, GraspGroupMsg
+from rob9.srv import graspGroupSrv, graspGroupSrvResponse
 from rob9Utils.grasp import Grasp
 
 class GraspGroup(object):
@@ -88,7 +89,7 @@ class GraspGroup(object):
     def setFrameId(self, id):
 
         for grasp in self.grasps:
-            grasp.frame_id = id
+            grasp.frame_id = str(id)
 
     def setObjectInstance(self, instance):
 
@@ -112,9 +113,24 @@ class GraspGroup(object):
         """ returns a graspGroup message """
 
         msg = GraspGroupMsg()
+        graspList = []
 
         for grasp in self.grasps:
-            msg.grasps.append(grasp.toGraspMsg())
+            graspList.append(grasp.toGraspMsg())
+
+        msg.grasps = graspList
+        return msg
+
+    def toGraspGroupSrv(self):
+        """ returns a graspGroup message """
+
+        msg = graspGroupSrvResponse()
+        graspList = []
+
+        for grasp in self.grasps:
+            graspList.append(grasp.toGraspMsg())
+
+        msg.grasps = graspList
         return msg
 
     def transformToFrame(self, tf_buffer, frame_dest):
