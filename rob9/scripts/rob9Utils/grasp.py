@@ -3,8 +3,6 @@ import rospy
 import numpy as np
 from geometry_msgs.msg import Pose, PoseStamped
 from std_msgs.msg import String, Float32, Int32, Header
-import tf_conversions
-from tf.transformations import quaternion_matrix, quaternion_from_matrix
 from rob9.msg import GraspMsg
 import rob9Utils.transformations as transform
 
@@ -41,7 +39,7 @@ class Orientation(object):
         return "Orientation (wxyz)" + str(self.w) + " " + str(self.x) + " " + str(self.y) + " " + str(self.z) + "\n"
 
     def getRotationMatrix(self):
-        return quaternion_matrix([self.x, self.y, self.z, self.w])[:3,:3]
+        return transform.quatToRot([self.x, self.y, self.z, self.w])
 
     def getVector(self, format = "wxyz"):
         if format == "wxyz":
@@ -53,6 +51,7 @@ class Orientation(object):
             return 0
 
     def fromRotationMatrix(self, R):
+        """ has been removed since there cant be tf conversions in here """
         self.__init__()
         if R.shape[0] < 4 or R.shape[1] < 4:
             for i in range(4 - R.shape[0]):
@@ -61,7 +60,7 @@ class Orientation(object):
                 R = np.r_[R, np.zeros((1, R.shape[1]))]
         R[-1, -1] = 1
 
-        q = quaternion_from_matrix(R)
+        #q = quaternion_from_matrix(R)
 
         self.x = q[0]
         self.y = q[1]

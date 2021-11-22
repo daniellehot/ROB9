@@ -61,6 +61,7 @@ add_message_files(
    graspGroupSrv.srv
    runGraspingSrv.srv
    tf2TransformPoseStampedSrv.srv
+   tf2QuatToRotSrv.srv
  )
 
 ## Generate actions in the 'action' folder
