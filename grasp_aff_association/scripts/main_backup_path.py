@@ -9,9 +9,12 @@ import open3d as o3d
 
 import rospy
 from nav_msgs.msg import Path
+import geometry_msgs
 from geometry_msgs.msg import PoseStamped, Pose
+import tf2_ros
+import tf2_geometry_msgs
 import tf_conversions
-from tf.transformations import quaternion_multiply, quaternion_conjugate, unit_vector
+from tf.transformations import euler_from_quaternion, quaternion_from_euler, quaternion_matrix, quaternion_multiply, quaternion_conjugate, unit_vector
 
 # ROB9
 from cameraService.cameraClient import CameraClient
@@ -21,7 +24,6 @@ import rob9Utils.transformations as transform
 from grasp_aff_association.srv import *
 from rob9Utils.graspGroup import GraspGroup
 from rob9Utils.grasp import Grasp
-from rob9.srv import graspGroupSrv, graspGroupSrvResponse
 
 # Merge list of masks, return as one greyscale image mask
 def merge_masks(masks, ids=[], visualize=False):
@@ -191,8 +193,8 @@ def handle_get_grasps(req):
 
         print('Getting affordance results...')
         affClient = AffordanceClient()
-        #affClient.start(GPU=False)
-        #_ = affClient.run(CONF_THRESHOLD = 0.5)
+        affClient.start(GPU=False)
+        _ = affClient.run(CONF_THRESHOLD = 0.5)
 
         _, _ = affClient.getAffordanceResult()
         affClient.processMasks(conf_threshold = 40, erode_kernel = (7,7))
@@ -215,6 +217,7 @@ def handle_get_grasps(req):
                         cloud_masked.append(cloud[k])
                 cloud_masked = np.array(cloud_masked)
 
+                #associated_grasps = GraspGroup(grasps = fuse_grasp_affordance(cloud_masked, graspData, visualize=False))
                 associated_grasps_list = fuse_grasp_affordance(cloud_masked, graspData, visualize=False)
                 if len(associated_grasps_list) > 0:
                     associated_grasps = GraspGroup(grasps = associated_grasps_list)
@@ -230,24 +233,108 @@ def handle_get_grasps(req):
             obj_instance += 1
         print(len(graspObjects), " in total")
 
-        camera_frame = "ptu_camera_color_optical_frame"
-        if req.demo.data:
+        # MOVE EVERYTHING WAYPOINT AND SPHERICAL COORDINATE RELATED TO TRAJECTORY
+        # SERVER
+        # Evaluating the best grasp.
+        world_frame = "world"
+        ee_frame = "right_ee_link"
+        if req.demo.data == True:
             camera_frame = "ptu_camera_color_optical_frame_real"
+        else:
+            camera_frame = "ptu_camera_color_optical_frame"
 
-        graspObjects.setFrameId(camera_frame)
-        print("Sending...")
-        msg = graspObjects.toGraspGroupSrv()
+        i, grasps, waypoints = 0, [], []
+        for i in range(len(graspObjects)):
 
-        print(msg)
+            grasp = graspObjects[i]
+            #grasp.frame_id = camera_frame
 
-        return msg
+            graspCamera = copy.deepcopy(grasp)
+            waypointCamera = copy.deepcopy(grasp)
+            graspCamera.frame_id = camera_frame
+            waypointCamera.frame_id = camera_frame
+
+            # computing waypoint in camera frame
+            rotMat = graspCamera.getRotationMatrix()
+            offset = np.array([[0.10], [0.0], [0.0]])
+            offset = np.transpose(np.matmul(rotMat, offset))[0]
+
+            waypointCamera.position.x += -offset[0]
+            waypointCamera.position.y += -offset[1]
+            waypointCamera.position.z += -offset[2]
+
+            # computing waypoint and grasp in world frame
+
+            waypointWorld = Grasp().fromPoseStampedMsg(transform.transformToFrame(waypointCamera.toPoseStampedMsg(), world_frame))
+            graspWorld = Grasp().fromPoseStampedMsg(transform.transformToFrame(graspCamera.toPoseStampedMsg(), world_frame))
+
+            # computing local cartesian coordinates
+            x = waypointWorld.position.x - graspWorld.position.x
+            y = waypointWorld.position.y - graspWorld.position.y
+            z = waypointWorld.position.z - graspWorld.position.z
+
+            # computing spherical coordinates
+            r, polarAngle, azimuthAngle = transform.cartesianToSpherical(x, y, z)
+
+            # Evaluating angle limits
+            azimuthAngleLimit = [-1*math.pi, 1*math.pi]
+            polarAngleLimit = [0, 0.35*math.pi]
+            polarAngleLimit = [0, 1*math.pi]
+
+            if azimuthAngle > azimuthAngleLimit[0] and azimuthAngle < azimuthAngleLimit[1]:
+                if polarAngle > polarAngleLimit[0] and polarAngle < polarAngleLimit[1]:
+                    waypointWorld.frame_id = str(graspObjects[i].tool_id)
+                    graspWorld.frame_id = str(graspObjects[i].tool_id)
+                    waypoints.append(waypointWorld.toPoseStampedMsg())
+                    grasps.append(graspWorld.toPoseStampedMsg())
+
+        if len(grasps) == 0 or len(waypoints) == 0:
+            print("Could not find grasp with appropriate angle")
+            grasp_msg = nav_msgs.msg.Path()
+            return grasps_msg # in case no grasps can be found, return empty message
+
+        """
+        eeWorld = tf_buffer.lookup_transform("world", "right_ee_link", rospy.Time.now(), rospy.Duration(1.0))
+        weightedSums = []
+
+        for i in range(len(grasps)):
+            deltaRPY = abs(transform.delta_orientation(grasps[i], eeWorld))
+            weightedSum = 0.2*deltaRPY[0]+0.4*deltaRPY[1]+0.4*deltaRPY[2]
+            weightedSums.append(weightedSum)
+
+        weightedSums_sorted = sorted(weightedSums)
+        grasps_sorted = [None]*len(grasps) # sorted according to delta orientation from current orientation of gripper
+        waypoints_sorted = [None]*len(waypoints)
+
+        for i in range(len(weightedSums)):
+            num = weightedSums_sorted[i]
+            index = weightedSums.index(num)
+            grasps_sorted[i] = grasps[index]
+            waypoints_sorted[i] = waypoints[index]
+
+        """
+
+        grasps_msg = nav_msgs.msg.Path()
+        grasps_msg.header.frame_id = "world"
+        grasps_msg.header.stamp = rospy.Time.now()
+        for i in range(len(grasps)):
+            grasps_msg.poses.append(waypoints[i])
+            #grasps_msg.poses[-1].header.frame_id = str(grasps[i].header.frame_id)
+            grasps_msg.poses.append(grasps[i])
+            #grasps_msg.poses[-1].header.frame_id = str(grasps[i].header.frame_id)
+        print("Sent grasps")
+
+        rospy.sleep(1)
+        pub.publish(grasps_msg)
+
+        return grasps_msg
 
 def main():
     global rate
     print("Setting up grasp affordance association service...")
 
     rospy.init_node('grasp_affordance_association', anonymous=True)
-    grasp_server = rospy.Service('get_grasps', graspGroupSrv, handle_get_grasps)
+    grasp_server = rospy.Service('get_grasps', GetGrasps, handle_get_grasps)
 
     rate = rospy.Rate(5)
 

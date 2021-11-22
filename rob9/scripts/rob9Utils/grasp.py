@@ -5,7 +5,7 @@ from geometry_msgs.msg import Pose, PoseStamped
 from std_msgs.msg import String, Float32, Int32, Header
 import tf_conversions
 from tf.transformations import quaternion_matrix, quaternion_from_matrix
-from rob9.msg import *
+from rob9.msg import GraspMsg
 import rob9Utils.transformations as transform
 
 class Position(object):
