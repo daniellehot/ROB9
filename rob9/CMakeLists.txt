@@ -12,6 +12,7 @@ find_package(catkin REQUIRED
   rospy
   std_msgs
   geometry_msgs
+  nav_msgs
   message_generation
 )
 
@@ -61,6 +62,7 @@ add_message_files(
    graspGroupSrv.srv
    runGraspingSrv.srv
    tf2TransformPoseStampedSrv.srv
+   tf2TransformPathSrv.srv
    tf2QuatToRotSrv.srv
  )
 
@@ -76,6 +78,7 @@ add_message_files(
    DEPENDENCIES
    std_msgs  # Or other packages containing msgs
    geometry_msgs
+   nav_msgs
  )
 
 ################################################

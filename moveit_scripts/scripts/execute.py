@@ -2,6 +2,8 @@
 import sys
 import copy
 import rospy
+import math
+import numpy as np
 
 from moveit_scripts.srv import *
 from moveit_scripts.msg import *
@@ -26,6 +28,7 @@ from rob9.srv import graspGroupSrv, graspGroupSrvResponse
 import rob9Utils.transformations as transform
 from rob9Utils.graspGroup import GraspGroup
 from rob9Utils.grasp import Grasp
+#from rob9Utils.visualize import visualizeGrasps6DOF
 # from robotiq_3f_gripper_articulated_msgs.msg import Robotiq3FGripperRobotOutput
 
 
@@ -161,14 +164,12 @@ def computeWaypoints(graspObjects, offset = 0.1):
 
         # computing waypoint in camera frame
         rotMat = graspCamera.getRotationMatrix()
-        offset = np.array([[offset], [0.0], [0.0]])
-        offset = np.transpose(np.matmul(rotMat, offset))[0]
+        offsetArr = np.array([[offset], [0.0], [0.0]])
+        offsetCam = np.transpose(np.matmul(rotMat, offsetArr))[0]
 
-        waypointCamera.position.x += -offset[0]
-        waypointCamera.position.y += -offset[1]
-        waypointCamera.position.z += -offset[2]
-
-        # computing waypoint and grasp in world frame
+        waypointCamera.position.x += -offsetCam[0]
+        waypointCamera.position.y += -offsetCam[1]
+        waypointCamera.position.z += -offsetCam[2]
 
         waypointWorld = Grasp().fromPoseStampedMsg(transform.transformToFrame(waypointCamera.toPoseStampedMsg(), world_frame))
         graspWorld = Grasp().fromPoseStampedMsg(transform.transformToFrame(graspCamera.toPoseStampedMsg(), world_frame))
@@ -177,6 +178,7 @@ def computeWaypoints(graspObjects, offset = 0.1):
         graspWorld.frame_id = str(graspObjects[i].tool_id)
         waypoints.append(waypointWorld.toPoseStampedMsg())
         grasps.append(graspWorld.toPoseStampedMsg())
+        print(i+1, " / ", len(graspObjects))
 
     grasps_msg = nav_msgs.msg.Path()
     grasps_msg.header.frame_id = "world"
@@ -196,10 +198,10 @@ def filterBySphericalCoordinates(poses, azimuth, polar):
         limits
     """
     grasps, waypoints = [], []
-    for i in range(int(len(poses) / 2)):
+    for i in range(int(len(poses.poses) / 2)):
 
-        waypointWorld = poses[i]
-        graspWorld = poses[i + 1]
+        waypointWorld = poses.poses[i]
+        graspWorld = poses.poses[i + 1]
 
         # computing local cartesian coordinates
         x = waypointWorld.pose.position.x - graspWorld.pose.position.x
@@ -217,6 +219,7 @@ def filterBySphericalCoordinates(poses, azimuth, polar):
             if polarAngle > polarAngleLimit[0] and polarAngle < polarAngleLimit[1]:
                 waypoints.append(waypointWorld)
                 grasps.append(graspWorld)
+
 
     if len(grasps) == 0 or len(waypoints) == 0:
         print("Could not find grasp with appropriate angle")
@@ -316,14 +319,21 @@ if __name__ == '__main__':
     get_grasps = rospy.ServiceProxy('get_grasps', graspGroupSrv)
     get_trajectories = rospy.ServiceProxy('get_trajectories', GetTrajectories)
     print("Calling the grasp service")
-    grasps_affordance = GraspGroup().fromGraspGroupMsg(get_grasps(demo))
+    grasps_affordance = GraspGroup().fromGraspGroupSrv(get_grasps(demo))
+    grasps_affordance.thresholdByScore(0.2)
     print(grasps_affordance)
-    exit()
-    grasp_waypoints_path = computeWaypoints(grasps_affordance, offset = 0.1)
+    grasp_waypoints_path = computeWaypoints(grasps_affordance, offset = 0.02)
+
+    #cloud, cloudColor = cam.getPointCloudStatic()
+    #pcd = o3d.geometry.PointCloud()
+    #pcd.points = o3d.utility.Vector3dVector(cloud)
+    #pcd.colors = o3d.utility.Vector3dVector(cloudColor)
+
+    #visualizeGrasps6DOF(pcd, GraspGroup(grasps = graspObjects.fromPath(grasp_waypoints_path)))
 
     azimuthAngleLimit = [-1*math.pi, 1*math.pi]
     polarAngleLimit = [0, 0.4*math.pi]
-    grasp_waypoints_path = filterBySphericalCoordinates(grasp_waypoints_path, azimuth = azimuthAngleLimit, polar = polarAngleLimit)
+    #grasp_waypoints_path = filterBySphericalCoordinates(grasp_waypoints_path, azimuth = azimuthAngleLimit, polar = polarAngleLimit)
 
     print("Calling the trajectory service")
     resp_trajectories = get_trajectories(grasp_waypoints_path)

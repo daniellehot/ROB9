@@ -200,11 +200,11 @@ def handle_get_grasps(req):
 
         print('Getting affordance results...')
         affClient = AffordanceClient()
-        #affClient.start(GPU=False)
-        #_ = affClient.run(CONF_THRESHOLD = 0.5)
+        affClient.start(GPU=False)
+        _ = affClient.run(CONF_THRESHOLD = 0.5)
 
         _, _ = affClient.getAffordanceResult()
-        affClient.processMasks(conf_threshold = 40, erode_kernel = (7,7))
+        affClient.processMasks(conf_threshold = 40, erode_kernel = (11,11))
 
         masks = affClient.masks
         objects = affClient.objects
@@ -233,15 +233,16 @@ def handle_get_grasps(req):
                     associated_grasps.setObjectInstance(obj_instance)
 
                     graspObjects = graspObjects.combine(associated_grasps)
-                    print(len(associated_grasps), len(graspObjects))
 
             print('Nr. of grasps found: ' + str(len(graspObjects.getGraspsByInstance(obj_instance))) + '  For object class: ' + str(objects[i]))
+
             cloud, cloudColor = cam.getPointCloudStatic()
             pcd = o3d.geometry.PointCloud()
             pcd.points = o3d.utility.Vector3dVector(cloud)
             pcd.colors = o3d.utility.Vector3dVector(cloudColor)
-            visualizeGrasps6DOF(pcd, GraspGroup(grasps=graspObjects.getGraspsByInstance(obj_instance)))
 
+            visualizeGrasps6DOF(pcd, GraspGroup(grasps = graspObjects.getGraspsByInstance(obj_instance)))
+            
             obj_instance += 1
 
 
@@ -251,7 +252,7 @@ def handle_get_grasps(req):
         camera_frame = "ptu_camera_color_optical_frame"
         if req.demo.data:
             camera_frame = "ptu_camera_color_optical_frame_real"
-
+        print(camera_frame)
         graspObjects.setFrameId(camera_frame)
         print("Sending...")
 

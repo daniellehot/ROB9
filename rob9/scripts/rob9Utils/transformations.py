@@ -2,9 +2,11 @@
 import rospy
 import geometry_msgs
 import numpy as np
+import geometry_msgs
 from geometry_msgs.msg import PoseStamped, Pose, Quaternion
 from std_msgs.msg import String
 from rob9.srv import tf2TransformPoseStampedSrv, tf2TransformPoseStampedSrvResponse
+from rob9.srv import tf2TransformPathSrv, tf2TransformPathSrvResponse
 from rob9.srv import tf2QuatToRotSrv, tf2QuatToRotSrvResponse
 
 import math
@@ -19,9 +21,26 @@ def transformToFrame(pose, newFrame):
     rospy.wait_for_service("/tf2/transformPoseStamped")
     tf2Service = rospy.ServiceProxy("/tf2/transformPoseStamped", tf2TransformPoseStampedSrv)
 
-    response = tf2Service(pose, String(newFrame))
+    response = tf2Service(pose, String(newFrame)).data
 
     return response
+
+def transformToFramePath(path, newFrame):
+    """ input:  pose - nav_msgs.Path()
+            newFrame - desired frame for pose to be transformed into.
+    output: transformed_path_msg - path in newFrame """
+
+    pose.header.stamp = rospy.Time.now()
+
+    rospy.wait_for_service("/tf2/transformPath")
+    tf2Service = rospy.ServiceProxy("/tf2/transformPath", tf2TransformPathSrv)
+
+    response = tf2Service(path, String(newFrame))
+
+    print(response)
+
+    return response
+
 
 def quatToRot(q):
 

@@ -135,6 +135,7 @@ class Grasp(object):
 
         return self
 
+
     def getRotationMatrix(self):
         return self.orientation.getRotationMatrix()
 

@@ -37,10 +37,26 @@ class GraspGroup(object):
 
         return self
 
+    def fromPath(self, msg):
+
+        self.__init__()
+        for poseMsg in msg.poses:
+            self.add(Grasp().fromPoseStampedMsg(graspMsg))
+
+        return self
+
     def fromGraspGroupMsg(self, msg):
 
         self.__init__()
         for graspMsg in msg.data.grasps:
+            self.add(Grasp().fromGraspMsg(graspMsg))
+
+        return self
+
+    def fromGraspGroupSrv(self, msg):
+
+        self.__init__()
+        for graspMsg in msg.grasps:
             self.add(Grasp().fromGraspMsg(graspMsg))
 
         return self
