@@ -1,0 +1,233 @@
+0 ptu_panner,
+1 ptu_tilter,
+
+2 shoulder_pan_joint,
+3 shoulder_lift_joint,
+4 elbow_joint,
+5 wrist_1_joint,
+6 wrist_2_joint,
+7 wrist_3_joint,
+
+palm_finger_1_joint,
+finger_1_joint_1,
+finger_1_joint_2,
+finger_1_joint_3,
+palm_finger_2_joint,
+finger_2_joint_1,
+finger_2_joint_2,
+finger_2_joint_3,
+finger_middle_joint_1,
+finger_middle_joint_2,
+finger_middle_joint_3
+
+for i in range(0, len(pose_array_msg.poses), 2):
+        poses_list = [ pose_array_msg.poses[i], pose_array_msg.poses[i+1] ]
+        print("i " + str(i) + " lenght " + str(len(pose_array_msg.poses)))
+        isFeasable, robot_states = validate_poses(poses_list)
+        if isFeasable == True:
+            print("isFeasable")
+            robot_state = robot_states[0]
+            joint_values_all = list(robot_state.solution.joint_state.position)
+            joint_values_at_waypoint = joint_values_all[2:8]
+
+            robot_state = robot_states[1]
+            joint_values_all = list(robot_state.solution.joint_state.position)
+            joint_values_at_goal = joint_values_all[2:8]
+
+            raw_input("Press Enter when you are ready to move the robot WAYPOINT")
+            move_group.go(joint_values_at_waypoint, wait=True)
+            move_group.stop()
+            move_group.clear_pose_targets()
+
+            raw_input("Press Enter when you are ready to move the robot GOAL")
+            move_group.go(joint_values_at_goal, wait=True)
+            move_group.stop()
+            move_group.clear_pose_targets()
+
+            exit()
+            #success_flag, plan = compute_trajectory(poses_list)
+        else:
+            continue
+
+        if success_flag==True:
+            print("Found a valid plan")
+            waypoint_msg = geometry_msgs.msg.PoseStamped()
+            waypoint_msg.header.frame_id = id
+            waypoint_msg.header.stamp = rospy.Time.now()
+            waypoint_msg.pose = poses_list[0]
+            trajectories_poses.append(waypoint_msg)
+
+            goal_msg = geometry_msgs.msg.PoseStamped()
+            goal_msg.header.frame_id = id
+            goal_msg.header.stamp = rospy.Time.now()
+            goal_msg.pose = poses_list[1]
+            trajectories_poses.append(goal_msg)
+
+            if isinstance(plan, list):
+                plan[0].joint_trajectory.header.frame_id = id
+                plan[1].joint_trajectory.header.frame_id = id
+                robot_trajectories.append(plan[0])
+                robot_trajectories.append(plan[1])
+                break
+            else:
+                plan.joint_trajectory.header.frame_id = id
+                robot_trajectories.append(plan)
+                break
+        else:
+            if i == end_index:
+                print("None of the suggested grasps were valid")
+                #plan = None
+                #robot_trajectories.append(plan)
+            else:
+                #print("poses_length " + str(poses_length) + " index i " + str(i))
+                print("Cannot reach the suggested grasp. Will try different configuration")
+
+return trajectories_poses, robot_trajectories
+
+
+
+----------------------------
+----------------------------
+----------------------------
+def compute_trajectory(poses_list):
+    success_flag = False
+    print("Computing a cartesian trajectory")
+    current_pose = move_group.get_current_pose()
+    start_pose = current_pose.pose
+    waypoint_pose = poses_list[0]
+    goal_pose = poses_list[1]
+    waypoints = [start_pose, waypoint_pose, goal_pose]
+
+    # compute cartesian trajectory
+    """
+    start_pose = geometry_msgs.msg.Pose()
+    current_pose = move_group.get_current_pose()
+    start_pose = current_pose.pose
+
+    waypoint_pose = geometry_msgs.msg.Pose()
+    waypoint_pose = poses_list[0].pose
+
+    goal_pose = geometry_msgs.msg.Pose()
+    goal_pose = poses_list[1].pose
+    waypoints = [start_pose, waypoint_pose, goal_pose]
+    """
+
+    (plan, fraction) = move_group.compute_cartesian_path(waypoints, 0.01, 0.0)
+    print("Cartesian plan fraction " + str(fraction))
+    #fraction = 1.1
+
+    global success_fraction
+    if fraction == success_fraction:
+        #send_trajectory_to_rviz(plan)
+        success_flag = True
+    else:
+        print("Computing a joint trajectory to the waypoint")
+        success_flag_waypoint, plan_waypoint = compute_start_to_waypoint(waypoint_pose)
+        if success_flag_waypoint == True:
+            print("Computing a joint trajectory from the waypoint to the goal")
+            current_state = robot.get_current_state()
+            start_state = moveit_msgs.msg.RobotState()
+            start_state = get_ik(waypoint_pose, current_state)
+            move_group.set_start_state(start_state)
+            waypoints_goal = [waypoint_pose, goal_pose]
+            plan_goal, fraction = move_group.compute_cartesian_path(waypoints_goal, 0.01, 0.0)
+            move_group.set_start_state(current_state)
+            if fraction == 1.0:
+                print("Cartesian path for waypoint to goal")
+                success_flag = True
+                plan = [plan_waypoint, plan_goal]
+            else:
+                print("Nope")
+                success_flag_goal, plan_goal = compute_waypoint_to_goal(waypoint_pose, goal_pose)
+                if success_flag_goal == True:
+                    print("Waypoint plan lenght is " + str(len(plan_waypoint.joint_trajectory.points)) )
+                    print("Goal plan lenght is " + str(len(plan_goal.joint_trajectory.points)) )
+                    success_flag = True
+                    plan = [plan_waypoint, plan_goal]
+
+    return success_flag, plan
+
+
+def compute_start_to_waypoint(waypoint_pose):
+    current_state = moveit_msgs.msg.RobotState()
+    current_state = robot.get_current_state()
+    move_group.set_start_state(current_state)
+    move_group.set_pose_target(waypoint_pose)
+
+    plan_list = []
+    plan_length = []
+    global replan_attempts, abort_attempts
+    for i in range(replan_attempts):
+        plan = move_group.plan()
+        plan_list.append(plan)
+
+        length = len(plan.joint_trajectory.points)
+        if length == 0:
+            length = 9999
+        plan_length.append(length)
+
+        if i == abort_attempts-1:
+            counter = 0
+            for j in range (abort_attempts):
+                if plan_length[j] == 9999:
+                    counter += 1
+            if counter == abort_attempts:
+                print("Quitting planning, the first five attempts failed")
+                break
+
+    min_index = plan_length.index(min(plan_length))
+    plan = plan_list[min_index]
+    if plan_length[min_index] == 9999:
+        #plan = None
+        success_flag = False
+    else:
+        #send_trajectory_to_rviz(plan)
+        success_flag = True
+
+    return success_flag, plan
+
+
+def compute_waypoint_to_goal(waypoint_pose, goal_pose):
+    current_state = moveit_msgs.msg.RobotState()
+    current_state = robot.get_current_state()
+    start_state = moveit_msgs.msg.RobotState()
+    start_state = get_ik(waypoint_pose, current_state)
+    move_group.set_start_state(start_state)
+
+    #print("compute_waypoint_to_goal state " + str(start_state))
+    move_group.set_pose_target(goal_pose)
+    plan_list = []
+    plan_length = []
+    global replan_attempts, abort_attempts
+    for i in range(replan_attempts):
+        plan = move_group.plan()
+        plan_list.append(plan)
+
+        length = len(plan.joint_trajectory.points)
+        if length == 0:
+            length = 9999
+        plan_length.append(length)
+
+        if i == abort_attempts-1:
+            counter = 0
+            for j in range (abort_attempts):
+                if plan_length[j] == 9999:
+                    counter += 1
+            if counter == abort_attempts:
+                print("Quitting planning, the first five attempts failed")
+                break
+
+    #print("Plan lengths " + str(plan_length))
+    min_index = plan_length.index(min(plan_length))
+    #print("Min index " + str(min_index))
+    plan = plan_list[min_index]
+    if plan_length[min_index] == 9999:
+        #plan = None
+        success_flag = False
+    else:
+        #send_trajectory_to_rviz(plan)
+        success_flag = True
+
+    move_group.set_start_state(current_state)
+    #move_group.set_start_state_to_current_state()
+    return success_flag, plan

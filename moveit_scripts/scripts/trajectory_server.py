@@ -177,12 +177,25 @@ def compute_trajectory(poses_list):
         success_flag_waypoint, plan_waypoint = compute_start_to_waypoint(waypoint_pose)
         if success_flag_waypoint == True:
             print("Computing a joint trajectory from the waypoint to the goal")
-            success_flag_goal, plan_goal = compute_waypoint_to_goal(waypoint_pose, goal_pose)
-            if success_flag_goal == True:
-                print("Waypoint plan lenght is " + str(len(plan_waypoint.joint_trajectory.points)) )
-                print("Goal plan lenght is " + str(len(plan_goal.joint_trajectory.points)) )
+            current_state = robot.get_current_state()
+            start_state = moveit_msgs.msg.RobotState()
+            start_state = get_ik(waypoint_pose, current_state)
+            move_group.set_start_state(start_state)
+            waypoints_goal = [waypoint_pose, goal_pose]
+            plan_goal, fraction = move_group.compute_cartesian_path(waypoints_goal, 0.01, 0.0)
+            move_group.set_start_state(current_state)
+            if fraction == 1.0:
+                print("Cartesian path for waypoint to goal")
                 success_flag = True
                 plan = [plan_waypoint, plan_goal]
+            else:
+                print("Nope")
+                success_flag_goal, plan_goal = compute_waypoint_to_goal(waypoint_pose, goal_pose)
+                if success_flag_goal == True:
+                    print("Waypoint plan lenght is " + str(len(plan_waypoint.joint_trajectory.points)) )
+                    print("Goal plan lenght is " + str(len(plan_goal.joint_trajectory.points)) )
+                    success_flag = True
+                    plan = [plan_waypoint, plan_goal]
 
     return success_flag, plan
 
@@ -273,6 +286,13 @@ def compute_waypoint_to_goal(waypoint_pose, goal_pose):
 
 
 def handle_get_trajectories(req):
+    poses_array_msg = geometry_msgs.msg.PoseArray()
+    poses_array_msg.header.frame_id = "world"
+    poses_array_msg.header.stamp = rospy.Time.now()
+    for i in range(len(req.grasps.poses)):
+        poses_array_msg.poses.append(req.grasps.poses[i].pose)
+    poses_pub.publish(poses_array_msg)
+
     print("handle_get_trajectories")
     if req.grasps.header.frame_id != "world":
         path_msg = transform_frame(req.grasps)
@@ -307,6 +327,7 @@ def handle_get_trajectories(req):
 
 if __name__ == '__main__':
     rospy.init_node('moveit_subscriber', anonymous=True)
+    poses_pub = rospy.Publisher('poses_to_reach', PoseArray, queue_size=10)
 
     replan_attempts = rospy.get_param("/replanning_attempts")
     abort_attempts = rospy.get_param("/abort_attempts")

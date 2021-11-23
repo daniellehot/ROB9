@@ -6,9 +6,8 @@ Panels:
       Expanded:
         - /MotionPlanning1/Planning Request1
         - /TF1
-        - /TF1/Frames1
       Splitter Ratio: 0.7425600290298462
-    Tree Height: 169
+    Tree Height: 259
   - Class: rviz/Help
     Name: Help
   - Class: rviz/Views
@@ -99,6 +98,11 @@ Visualization Manager:
             Alpha: 1
             Show Axes: false
             Show Trail: false
+          connector_box_camera:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
           finger_1_link_0:
             Alpha: 1
             Show Axes: false
@@ -271,6 +275,11 @@ Visualization Manager:
             Alpha: 1
             Show Axes: false
             Show Trail: false
+          top_table:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
           torso:
             Alpha: 1
             Show Axes: false
@@ -374,6 +383,11 @@ Visualization Manager:
             Alpha: 1
             Show Axes: false
             Show Trail: false
+          connector_box_camera:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
           finger_1_link_0:
             Alpha: 1
             Show Axes: false
@@ -546,6 +560,11 @@ Visualization Manager:
             Alpha: 1
             Show Axes: false
             Show Trail: false
+          top_table:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
           torso:
             Alpha: 1
             Show Axes: false
@@ -586,7 +605,7 @@ Visualization Manager:
       Velocity_Scaling_Factor: 1
     - Class: rviz/TF
       Enabled: true
-      Frame Timeout: 15
+      Frame Timeout: 30
       Frames:
         All Enabled: false
         base:
@@ -601,6 +620,8 @@ Visualization Manager:
           Value: false
         camera_wrist_link:
           Value: false
+        connector_box_camera:
+          Value: true
         finger_1_link_0:
           Value: false
         finger_1_link_1:
@@ -643,6 +664,8 @@ Visualization Manager:
           Value: false
         ptu_camera_color_optical_frame:
           Value: true
+        ptu_camera_color_optical_frame_real:
+          Value: true
         ptu_camera_depth_frame:
           Value: false
         ptu_camera_depth_optical_frame:
@@ -675,8 +698,8 @@ Visualization Manager:
           Value: false
         tool0:
           Value: false
-        tool0_controller:
-          Value: false
+        top_table:
+          Value: true
         torso:
           Value: false
         torso_link:
@@ -698,6 +721,8 @@ Visualization Manager:
       Show Names: false
       Tree:
         world:
+          ptu_camera_color_optical_frame_real:
+            {}
           table:
             ptu_base:
               ptu_pan:
@@ -715,8 +740,12 @@ Visualization Manager:
                             ptu_camera_left_ir_optical_frame:
                               {}
                           ptu_camera_right_ir_frame:
+                            connector_box_camera:
+                              {}
                             ptu_camera_right_ir_optical_frame:
                               {}
+            top_table:
+              {}
             torso_link:
               torso:
                 camera:
@@ -726,8 +755,7 @@ Visualization Manager:
                 right_link:
                   base_link:
                     base:
-                      tool0_controller:
-                        {}
+                      {}
                     base_link_inertia:
                       shoulder_link:
                         upper_arm_link:
@@ -776,7 +804,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -791,7 +819,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -804,7 +832,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -819,7 +847,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -836,7 +864,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 3.021472454071045
+      Distance: 2.927140951156616
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -851,10 +879,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8997962474822998
+      Pitch: 0.6547968983650208
       Target Frame: world
       Value: XYOrbit (rviz)
-      Yaw: 3.378554105758667
+      Yaw: 3.1535632610321045
     Saved: ~
 Window Geometry:
   Displays:
@@ -868,9 +896,9 @@ Window Geometry:
     collapsed: false
   MotionPlanning - Trajectory Slider:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd00000001000000000000024e00000387fc0200000007fb000000100044006900730070006c00610079007301000000270000013b000000c900fffffffb0000000800480065006c00700000000342000000bb0000006e00fffffffb0000000a0056006900650077007300000001d0000000b0000000a400fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e00670100000374000001890000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c0069006400650072000000023f000000410000001600000016fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670100000168000002460000017d00ffffff000004eb0000038700000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000001000000000000024e00000363fc0200000007fb000000100044006900730070006c00610079007301000000470000019f000000f100fffffffb0000000800480065006c00700000000342000000bb0000008400fffffffb0000000a0056006900650077007300000001d0000000b0000000c200fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e00670100000374000001890000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c0069006400650072000000023f000000410000001900000019fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e006701000001ed000001bd000001bd00ffffff0000052b0000036300000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Views:
     collapsed: false
-  Width: 1855
-  X: 65
+  Width: 1920
+  X: 0
   Y: 34

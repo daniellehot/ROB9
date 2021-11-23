@@ -20,11 +20,10 @@ import tf2_ros
 
 
 def callback(msg):
-    br = tf2_ros.TransformBroadcaster()
     t_list = []
     poses_len = len(msg.poses)
     print ("Poses length " + str(poses_len))
-    for i in range(1, len(msg.poses), 2):
+    for i in range(len(msg.poses)):
         child_frame_id = "grasp_to_reach"+str(i)
         t = geometry_msgs.msg.TransformStamped()
         t.header.stamp = rospy.Time.now()
@@ -50,6 +49,7 @@ if __name__ == '__main__':
 
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
+    br = tf2_ros.TransformBroadcaster()
 
     try:
         rospy.spin()
