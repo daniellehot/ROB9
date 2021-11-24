@@ -40,8 +40,11 @@ class GraspingGeneratorClient(object):
         msg = runGraspingSrv()
         msg.data = True
         response = graspGeneratorService(msg)
+        grasps = GraspGroup().fromGraspGroupMsg(response)
 
-        return GraspGroup().fromGraspGroupMsg(response)
+        del response
+
+        return grasps
 
     def setSettings(self, collision_thresh = 0.01, num_view = 300, score_thresh = 0.0, voxel_size = 0.2):
 

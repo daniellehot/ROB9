@@ -40,14 +40,15 @@ class GraspGroup(object):
     def fromPath(self, msg):
 
         self.__init__()
+        self.grasps = []
         for poseMsg in msg.poses:
             self.add(Grasp().fromPoseStampedMsg(graspMsg))
 
         return self
 
     def fromGraspGroupMsg(self, msg):
-
         self.__init__()
+        self.grasps = []
         for graspMsg in msg.data.grasps:
             self.add(Grasp().fromGraspMsg(graspMsg))
 
@@ -56,6 +57,7 @@ class GraspGroup(object):
     def fromGraspGroupSrv(self, msg):
 
         self.__init__()
+        self.grasps = []
         for graspMsg in msg.grasps:
             self.add(Grasp().fromGraspMsg(graspMsg))
 
@@ -65,7 +67,7 @@ class GraspGroup(object):
 
         grasps = []
         for grasp in self.grasps:
-            if grasp.affordance == label:
+            if grasp.affordance_id == label:
                 grasps.append(grasp)
 
         return grasps
@@ -117,6 +119,17 @@ class GraspGroup(object):
         for grasp in self.grasps:
             grasp.tool_id = id
 
+    def sortByScore(self):
+
+        scores = []
+        for grasp in self.grasps:
+            scores.append(grasp.score)
+
+        idx = sorted(range(len(scores)), key=lambda k: scores[k])
+        idx.reverse()
+        grasps = [self.grasps[i] for i in idx]
+        self.grasps = grasps
+
     def thresholdByScore(self, thresh):
 
         thresholdGrasps = []
@@ -154,30 +167,3 @@ class GraspGroup(object):
         grasps = []
         for grasp in self.grasps:
             grasp.transformToFrame(tf_buffer, frame_dest)
-
-if __name__ == '__main__':
-    rospy.init_node('rob9_graspgroup_test', anonymous=True)
-    tf_buffer = tf2_ros.Buffer()
-    tf_listener = tf2_ros.TransformListener(tf_buffer)
-    rospy.sleep(1)
-
-    graspGroup = GraspGroup()
-    for i in range(3):
-        g = Grasp()
-        graspGroup.add(g)
-        g.object_instance = i
-        g.affordance = i
-        g.tool_id = i
-        print(g.object_instance)
-
-    g = Grasp()
-    msg = graspGroup.toGraspGroupMsg()
-
-    graspGroup.transformToFrame(tf_buffer, "world")
-    msg = graspGroup.toGraspGroupMsg()
-
-    grasps = graspGroup.getGraspsByInstance(instance = 1)
-    print(grasps)
-    print(graspGroup.getgraspsByTool(2))
-    print(graspGroup.getgraspsByAffordanceLabel(3))
-    print(graspGroup.getgraspsByFrame("world"))

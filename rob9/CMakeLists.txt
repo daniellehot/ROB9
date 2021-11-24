@@ -64,6 +64,9 @@ add_message_files(
    tf2TransformPoseStampedSrv.srv
    tf2TransformPathSrv.srv
    tf2QuatToRotSrv.srv
+   tf2QuaternionMultiplySrv.srv
+   tf2QuaternionConjugateSrv.srv
+   tf2UnitVectorSrv.srv
  )
 
 ## Generate actions in the 'action' folder

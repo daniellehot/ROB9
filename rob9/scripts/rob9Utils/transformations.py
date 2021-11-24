@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
+import numpy as np
+import math
+
 import rospy
 import geometry_msgs
-import numpy as np
-import geometry_msgs
-from geometry_msgs.msg import PoseStamped, Pose, Quaternion
+from geometry_msgs.msg import PoseStamped, Pose, Quaternion, Vector3
 from std_msgs.msg import String
+
 from rob9.srv import tf2TransformPoseStampedSrv, tf2TransformPoseStampedSrvResponse
 from rob9.srv import tf2TransformPathSrv, tf2TransformPathSrvResponse
 from rob9.srv import tf2QuatToRotSrv, tf2QuatToRotSrvResponse
+from rob9.srv import tf2QuaternionMultiplySrv, tf2QuaternionMultiplySrvResponse
+from rob9.srv import tf2QuaternionConjugateSrv, tf2QuaternionConjugateSrvResponse
+from rob9.srv import tf2UnitVectorSrv, tf2UnitVectorSrvResponse
 
-import math
 
 def transformToFrame(pose, newFrame):
     """ input:  pose - geometry_msgs.PoseStamped()
@@ -69,6 +73,58 @@ def cartesianToSpherical(x, y, z):
     return r, polar, azimuth
 
 def quaternionMultiply(q1, q2):
+    """ input:  -   q1, array or list, format xyzw
+                -   q2, array or list, format xyzw
+        output: -   q,  array or list, format xyzw
+        multiplies q1 and q2 using tf2_ros """
+
+    rospy.wait_for_service("/tf2/quaternion_multiply")
+    tf2Service = rospy.ServiceProxy("/tf2/quaternion_multiply", tf2QuaternionMultiplySrv)
+
+    m1 = Quaternion()
+    m1.x, m1.y, m1.z, m1.w = q1[0], q1[1], q1[2], q1[3]
+
+    m2 = Quaternion()
+    m2.x, m2.y, m2.z, m2.w = q2[0], q2[1], q2[2], q2[3]
+
+    res = tf2Service(m1, m2).q
+    q = [res.x, res.y, res.z, res.w]
+
+    return q
+
+def quaternionConjugate(q):
+    """ input:  -   q, array or list, format xyzw
+        output: -   qc,  array or list, format xyzw
+        conjugate of q using tf2_ros """
+
+    rospy.wait_for_service("/tf2/quaternion_conjugate")
+    tf2Service = rospy.ServiceProxy("/tf2/quaternion_conjugate", tf2QuaternionConjugateSrv)
+
+    m = Quaternion()
+    m.x, m.y, m.z, m.w = q[0], q[1], q[2], q[3]
+
+    res = tf2Service(m).qc
+    q = [res.x, res.y, res.z, res.w]
+
+    return q
+
+def unitVector(v):
+    """ input:  -   v, array or list [x, y, z]
+        output: -   v_norm,  array or list [x, y, z]
+        normalizes a given vector using tf2_ros """
+
+    rospy.wait_for_service("/tf2/unit_vector")
+    tf2Service = rospy.ServiceProxy("/tf2/unit_vector", tf2UnitVectorSrv)
+
+    m = Vector3()
+    m.x, m.y, m.z = v[0], v[1], v[2]
+
+    res = tf2Service(m).v_norm
+    v_norm = [res.x, res.y, res.z]
+
+    return v_norm
+
+def quaternionMultiplyOld(q1, q2):
     # q1
     x0, y0, z0, w0 = q1[0], q1[1], q1[2], q1[3]
 
@@ -112,3 +168,12 @@ def delta_orientation(pose1, pose2):
 if __name__ == '__main__':
     print("Start")
     quatToRot([0, 0, 0, 1])
+
+    q1 = [0, 0, 0, 1]
+    print(quaternionConjugate(q1))
+
+    v = [2, 5, 1]
+    print(unitVector(v))
+
+    q2 = [0, 1, 0, 0]
+    print(quaternionMultiply(q1, q2))

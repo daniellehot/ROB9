@@ -11,13 +11,16 @@ if __name__ == "__main__":
     rospy.init_node('affordance_analyzer_client', anonymous=True)
 
     affClient = AffordanceClient()
-    affClient.start(GPU=True) # GPU acceleratio True or False
+    cam = CameraClient()
+    cam.captureNewScene()
+    cam.getRGB()
+    affClient.start(GPU=False) # GPU acceleratio True or False
 
     print("Telling affordanceNET to analyze image from realsense and return predictions.")
-    success = affClient.run(CONF_THRESHOLD = 0.3)
+    success = affClient.run(CONF_THRESHOLD = 0.5)
     _, _ = affClient.getAffordanceResult()
 
-    success = affClient.processMasks(conf_threshold = 50, erode_kernel=(21,21))
+    success = affClient.processMasks(conf_threshold = 50, erode_kernel=(9,9))
     success = affClient.visualizeMasks()
     success = affClient.visualizeBBox()
 

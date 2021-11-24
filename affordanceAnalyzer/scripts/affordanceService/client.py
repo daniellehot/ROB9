@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
 import sys
-import rospy
-from affordance_analyzer.srv import *
-import numpy as np
-import cv2
+import time
 import copy
+import rospy
+import cv2
+import numpy as np
+
 from cameraService.cameraClient import CameraClient
+from affordance_analyzer.srv import *
 
 class AffordanceClient(object):
     """docstring for AffordanceClient."""
@@ -54,12 +56,18 @@ class AffordanceClient(object):
 
     def getAffordanceResult(self):
 
+        s1 = time.time()
         rospy.wait_for_service("/affordance/result")
         affordanceNetService = rospy.ServiceProxy("/affordance/result", getAffordanceSrv)
+        print("Waiting for affordance service took: ", (time.time() - s1) * 1000 )
+
+        s2 = time.time()
         msg = getAffordanceSrv()
         msg.data = True
         response = affordanceNetService(msg)
+        print("Receiving data from affordance service took: ", (time.time() - s2) * 1000 )
 
+        s3 = time.time()
         no_objects = int(response.masks.layout.dim[0].size / 10)
         self.no_objects = no_objects
         masks = np.asarray(response.masks.data).reshape((no_objects, int(response.masks.layout.dim[0].size / no_objects), response.masks.layout.dim[1].size, response.masks.layout.dim[2].size)) #* 255
@@ -73,6 +81,8 @@ class AffordanceClient(object):
         print('Data type: ' + str(self.masks.dtype))
         print('Bounding box: ' + str(self.bbox))
         print('Objects: ' + str(self.objects))
+
+        print("Processing affordance message took: ", (time.time() - s3) * 1000 )
 
         return self.masks, self.objects
 
@@ -88,7 +98,7 @@ class AffordanceClient(object):
         print("Visualizing ", self.bbox.shape[0], " bounding boxes")
 
         cam = CameraClient()
-        img = cam.getRGB()
+        img = copy.deepcopy(cam.rgb)
 
         for i in range(self.bbox.shape[0]):
 
@@ -137,7 +147,7 @@ class AffordanceClient(object):
         print("Visualizing ", self.masks.shape[0] * self.masks.shape[1], " masks for ", self.masks.shape[0], " objects.")
 
         cam = CameraClient()
-        img = copy.deepcopy(cam.getRGB())
+        img = copy.deepcopy(cam.rgb)
 
         colors = [(0,0,205), (34,139,34), (192,192,128), (165, 42, 42), (128, 64, 128),
                 (204, 102, 0), (184, 134, 11), (0, 153, 153), (0, 134, 141), (184, 0, 141)]
