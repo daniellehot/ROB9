@@ -63,6 +63,7 @@ add_message_files(
    graspGroupSrv.srv
    moveitMoveToNamedSrv.srv
    moveitExecuteSrv.srv
+   moveitRobotStateSrv.srv
    runGraspingSrv.srv
    tf2TransformPoseStampedSrv.srv
    tf2TransformPathSrv.srv

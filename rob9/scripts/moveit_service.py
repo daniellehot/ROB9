@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-import rospy
+import sys
 
+import rospy
 import moveit_commander
 import moveit_msgs
 
@@ -10,12 +11,17 @@ from rob9.srv import moveitRobotStateSrv, moveitRobotStateSrvResponse
 
 def moveToNamed(req):
 
-    move_group.set_named_target(req.data)
+    print("Moving robot to named position: ", req.name.data)
+
+    move_group.set_named_target(req.name.data)
     plan = move_group.go(wait=True)
     move_group.stop()
     move_group.clear_pose_targets()
 
-    return True
+    resp = moveitMoveToNamedSrvResponse()
+    resp.success.data = True
+
+    return resp
 
 def execute(req):
 
@@ -23,7 +29,10 @@ def execute(req):
     move_group.stop()
     move_group.clear_pose_targets()
 
-    return True
+    resp = moveitExecuteSrvResponse()
+    resp.success.data = True
+
+    return resp
 
 def getCurrentState(req):
 
