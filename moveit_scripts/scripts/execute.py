@@ -5,96 +5,32 @@ import rospy
 import math
 import numpy as np
 
-from moveit_scripts.srv import *
-from moveit_scripts.msg import *
-from grasp_aff_association.srv import *
+#import moveit_commander
+#import moveit_msgs
 
-import moveit_commander
-import moveit_msgs
-#from moveit_commander.conversions import pose_to_list
-#from moveit_msgs.srv import *
-#import moveit_msgs.msg
-#from moveit_msgs.msg import PositionIKRequest, RobotState, MoveItErrorCodes
 import geometry_msgs.msg
 from geometry_msgs.msg import Pose, PoseStamped, PoseArray
 import std_msgs.msg
 from std_msgs.msg import Int8
-from math import pi
-import tf2_ros
-import tf2_geometry_msgs
-import tf_conversions
-import tf2_ros
+
 from rob9.srv import graspGroupSrv, graspGroupSrvResponse
 import rob9Utils.transformations as transform
 from rob9Utils.graspGroup import GraspGroup
 from rob9Utils.grasp import Grasp
+import rob9Utils.moveit as moveit
+
+from moveit_scripts.srv import *
+from moveit_scripts.msg import *
+from grasp_aff_association.srv import *
+
 #from rob9Utils.visualize import visualizeGrasps6DOF
 # from robotiq_3f_gripper_articulated_msgs.msg import Robotiq3FGripperRobotOutput
-
-
-def move_to_ready():
-    print("Moving to ready")
-    move_group.set_named_target("ready")
-    plan = move_group.go(wait=True)
-    move_group.stop()
-    move_group.clear_pose_targets()
-    gripper_pub.publish(open_gripper_msg)
-    print("Done")
-
-def move_to_handover():
-    print("Moving to pre-handover pose")
-    move_group.set_named_target("ready")
-    plan = move_group.go(wait=True)
-    move_group.stop()
-    move_group.clear_pose_targets()
-
-    print("Moving to handover pose")
-    move_group.set_named_target("handover")
-    plan = move_group.go(wait=True)
-    move_group.stop()
-    move_group.clear_pose_targets()
-    #gripper_pub.publish(open_gripper_msg)
-    print("Done")
-
-def compare_current_and_start_state(robot_trajectory_msg):
-    same_flag = True
-    joint_values_current = move_group.get_current_joint_values()
-    joint_values_start = robot_trajectory_msg.joint_trajectory.points[0].positions
-
-    if not isinstance(joint_values_start, list):
-        print("good call")
-        joint_values_start = list(joint_values_start)
-
-    for i in range(6):
-        joint_values_start[i] = round(joint_values_start[i], 2)
-        joint_values_current[i] = round(joint_values_current[i], 2)
-
-    if (joint_values_current == joint_values_start):
-        print("Start state equals current")
-    else:
-        print("Start state does not equal the current state")
-        print("Current_joint_values " + str(joint_values_current))
-        print("--------------------------------------")
-        print("Trajectory " + str(robot_trajectory_msg.joint_trajectory.points[0].positions))
-        print("Moving to the start state")
-        joint_goal = joint_values_start
-        #joint_goal[0] = joint_values_start[0]
-        #joint_goal[1] = joint_values_start[1]
-        #joint_goal[2] = joint_values_start[2]
-        #joint_goal[3] = joint_values_start[3]
-        #joint_goal[4] = joint_values_start[4]
-        #joint_goal[5] = joint_values_start[5]
-
-        raw_input("Press Enter when you are ready to move the robot")
-        move_group.go(joint_goal, wait=True)
-        move_group.stop()
-        move_group.clear_pose_targets()
-
 
 def send_trajectory_to_rviz(plan):
     print("Trajectory was sent to RViZ")
     display_trajectory = moveit_msgs.msg.DisplayTrajectory()
-    display_trajectory.trajectory_start = robot.get_current_state()
+    #display_trajectory.trajectory_start = robot.get_current_state()
+    display_trajectory.trajectory_start = moveit.getCurrentState()
     display_trajectory.trajectory.append(plan)
     display_trajectory_publisher.publish(display_trajectory)
 
@@ -132,18 +68,26 @@ def callback(msg):
     pub_grasp.publish(goal_msg)
 
     #rospy.sleep(6.)
-    for i in range(2):
-        compare_current_and_start_state(plans[i])
+    for i in range(3):
         send_trajectory_to_rviz(plans[i])
-        raw_input("Press Enter when you are ready to move the robot")
-        move_group.execute(plans[i], wait=True)
-        move_group.stop()
-        move_group.clear_pose_targets()
-    gripper_pub.publish(close_gripper_msg)
+        #raw_input("Press Enter when you are ready to move the robot")
+        #move_group.execute(plans[i], wait=True)
+        #move_group.stop()
+        #move_group.clear_pose_targets()
+        moveit.execute(plans[i])
+        if i == 1:
+            gripper_pub.publish(close_gripper_msg)
+            rospy.sleep(1)
+        print("made it")
     raw_input("Press Enter when you are ready to move the robot to the handover pose")
-    move_to_handover()
+    #move_to_handover()
+    moveit.moveToNamed("ready")
+    moveit.moveToNamed("handover")
     raw_input("Press Enter when you are ready to move the robot back to the ready pose")
-    move_to_ready()
+
+    moveit.moveToNamed("ready")
+    gripper_pub.publish(open_gripper_msg)
+    #move_to_ready()
 
 def computeWaypoints(graspObjects, offset = 0.1):
     """ input:  graspsObjects   -   GraspGroup() of grasps
@@ -174,7 +118,7 @@ def computeWaypoints(graspObjects, offset = 0.1):
         waypointWorld = Grasp().fromPoseStampedMsg(transform.transformToFrame(waypointCamera.toPoseStampedMsg(), world_frame))
         graspWorld = Grasp().fromPoseStampedMsg(transform.transformToFrame(graspCamera.toPoseStampedMsg(), world_frame))
 
-        waypointWorld.frame_id = str(graspObjects[i].tool_id) # we should probably do away with this way of doing it
+        waypointWorld.frame_id = str(graspObjects[i].tool_id) # we should probably do away with storing it in the header
         graspWorld.frame_id = str(graspObjects[i].tool_id)
         waypoints.append(waypointWorld.toPoseStampedMsg())
         grasps.append(graspWorld.toPoseStampedMsg())
@@ -236,6 +180,7 @@ def filterBySphericalCoordinates(poses, azimuth, polar):
     return grasps_msg
 
 def sortByOrientationDifference(poses):
+    # Should be moved to GraspGroup.py
     # not yet implemented! this is the old deltaRPY
     """ input:  poses   -   nav_msgs/Path, a list of waypoints and grasps in pairs
         output:         -   nav_msgs/Path, a list of waypoints and grasps in pairs
@@ -283,18 +228,6 @@ if __name__ == '__main__':
     # DO NOT REMOVE THIS SLEEP, it allows gripper_pub to establish connection to the topic
     rospy.sleep(0.1)
 
-    moveit_commander.roscpp_initialize(sys.argv)
-    robot = moveit_commander.RobotCommander()
-    move_group = moveit_commander.MoveGroupCommander("manipulator")
-    #move_group.set_max_acceleration_scaling_factor(0.1)
-    #move_group.set_max_velocity_scaling_factor(0.1)
-
-
-
-
-    tf_buffer = tf2_ros.Buffer()
-    tf_listener = tf2_ros.TransformListener(tf_buffer)
-
     reset_gripper_msg = std_msgs.msg.Int8()
     reset_gripper_msg.data = 0
     activate_gripper_msg = std_msgs.msg.Int8()
@@ -321,7 +254,7 @@ if __name__ == '__main__':
     print("Calling the grasp service")
     grasps_affordance = GraspGroup().fromGraspGroupSrv(get_grasps(demo))
     grasps_affordance.thresholdByScore(0.2)
-    print(grasps_affordance)
+
     grasp_waypoints_path = computeWaypoints(grasps_affordance, offset = 0.02)
 
     #cloud, cloudColor = cam.getPointCloudStatic()
