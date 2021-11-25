@@ -4,6 +4,7 @@ import copy
 import rospy
 import math
 import numpy as np
+import time
 
 from moveit_scripts.srv import *
 from moveit_scripts.msg import *
@@ -131,16 +132,22 @@ def callback(msg):
     goal_msg.pose = goal_poses[1].pose
     pub_grasp.publish(goal_msg)
 
+    print(plans[i])
+    print(type(plans[i]))
+
     #rospy.sleep(6.)
-    for i in range(2):
-        compare_current_and_start_state(plans[i])
+    raw_input("Press Enter when you are ready to move the robot")
+    for i in range(3):
+        #compare_current_and_start_state(plans[i])
         send_trajectory_to_rviz(plans[i])
-        raw_input("Press Enter when you are ready to move the robot")
         move_group.execute(plans[i], wait=True)
         move_group.stop()
         move_group.clear_pose_targets()
-    gripper_pub.publish(close_gripper_msg)
-    raw_input("Press Enter when you are ready to move the robot to the handover pose")
+        if i == 1:
+            gripper_pub.publish(close_gripper_msg)
+            rospy.sleep(1)
+
+    #raw_input("Press Enter when you are ready to move the robot to the handover pose")
     move_to_handover()
     raw_input("Press Enter when you are ready to move the robot back to the ready pose")
     move_to_ready()
@@ -158,6 +165,20 @@ def computeWaypoints(graspObjects, offset = 0.1):
     for i in range(len(graspObjects)):
 
         grasp = graspObjects[i]
+
+        #q_x_180 = [0, 0, 1, 0]
+        #g_q = grasp.orientation.getVector(format="xyzw")
+        #q = transform.quaternionMultiply(g_q, q_x_180)
+
+        #print(grasp.orientation)
+
+        #grasp.orientation.x = q[0]
+        #grasp.orientation.y = q[1]
+        #grasp.orientation.z = q[2]
+        #grasp.orientation.w = q[3]
+
+        #print(grasp.orientation)
+        #print()
 
         graspCamera = copy.deepcopy(grasp)
         waypointCamera = copy.deepcopy(grasp)
@@ -316,13 +337,14 @@ if __name__ == '__main__':
     print("Services init")
     rospy.wait_for_service('get_grasps')
     rospy.wait_for_service('get_trajectories')
-    get_grasps = rospy.ServiceProxy('get_grasps', graspGroupSrv)
+    get_grasps_service = rospy.ServiceProxy('get_grasps', graspGroupSrv)
     get_trajectories = rospy.ServiceProxy('get_trajectories', GetTrajectories)
     print("Calling the grasp service")
-    grasps_affordance = GraspGroup().fromGraspGroupSrv(get_grasps(demo))
-    grasps_affordance.thresholdByScore(0.2)
+    grasps_affordance = GraspGroup().fromGraspGroupSrv(get_grasps_service(demo))
+    grasps_affordance.sortByScore()
+    grasps_affordance.thresholdByScore(0.0)
     print(grasps_affordance)
-    grasp_waypoints_path = computeWaypoints(grasps_affordance, offset = 0.02)
+    grasp_waypoints_path = computeWaypoints(grasps_affordance, offset = 0.1)
 
     #cloud, cloudColor = cam.getPointCloudStatic()
     #pcd = o3d.geometry.PointCloud()
@@ -332,7 +354,7 @@ if __name__ == '__main__':
     #visualizeGrasps6DOF(pcd, GraspGroup(grasps = graspObjects.fromPath(grasp_waypoints_path)))
 
     azimuthAngleLimit = [-1*math.pi, 1*math.pi]
-    polarAngleLimit = [0, 0.4*math.pi]
+    polarAngleLimit = [0, 0.5*math.pi]
     #grasp_waypoints_path = filterBySphericalCoordinates(grasp_waypoints_path, azimuth = azimuthAngleLimit, polar = polarAngleLimit)
 
     print("Calling the trajectory service")
