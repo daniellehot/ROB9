@@ -50,25 +50,6 @@ class Orientation(object):
             print("Invalid quaternion format, chose wxyz or xyzw ")
             return 0
 
-    def fromRotationMatrix(self, R):
-        """ has been removed since there cant be tf conversions in here """
-        self.__init__()
-        if R.shape[0] < 4 or R.shape[1] < 4:
-            for i in range(4 - R.shape[0]):
-                R = np.c_[R, np.zeros((R.shape[1], 1))]
-            for i in range(4 - R.shape[0]):
-                R = np.r_[R, np.zeros((1, R.shape[1]))]
-        R[-1, -1] = 1
-
-        #q = quaternion_from_matrix(R)
-
-        self.x = q[0]
-        self.y = q[1]
-        self.z = q[2]
-        self.w = q[3]
-
-        return self
-
 class Grasp(object):
     """docstring for Grasp."""
 

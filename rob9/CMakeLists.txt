@@ -13,6 +13,7 @@ find_package(catkin REQUIRED
   std_msgs
   geometry_msgs
   nav_msgs
+  moveit_msgs
   message_generation
 )
 
@@ -60,6 +61,9 @@ add_message_files(
  add_service_files(
    FILES
    graspGroupSrv.srv
+   moveitMoveToNamedSrv.srv
+   moveitExecuteSrv.srv
+   moveitRobotStateSrv.srv
    runGraspingSrv.srv
    tf2TransformPoseStampedSrv.srv
    tf2TransformPathSrv.srv
@@ -82,6 +86,7 @@ add_message_files(
    std_msgs  # Or other packages containing msgs
    geometry_msgs
    nav_msgs
+   moveit_msgs
  )
 
 ################################################
