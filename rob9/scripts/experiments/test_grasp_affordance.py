@@ -211,6 +211,19 @@ if __name__ == '__main__':
     print("Computing task oriented grasps")
     grasps_affordance = GraspGroup().fromGraspGroupSrv(get_grasps_service(demo))
 
+    # 1 = contain
+    # 2 = cut
+    # 3 = display
+    # 4 = engine
+    # 5 = grasp
+    # 6 = hit
+    # 7 = pound
+    # 8 = support
+    # 9 = wide grasp
+
+    # Select affordance label to grasp
+    grasp_affordance = GraspGroup(grasps = grasp_affordance.getgraspsByAffordanceLabel(label = 7)
+
     # Visualize object detection and affordance segmentation to confirm
     affClient = AffordanceClient()
     cam = CameraClient()
