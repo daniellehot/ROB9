@@ -1,0 +1,26 @@
+<annotation>
+	<folder>16377633634416656</folder>
+	<filename>rgb.png</filename>
+	<path>/home/albert/Documents/Aalborg_Universitet/9_Semester/project/code/src/ROB9/rob9/scripts/experiments/data/16377633634416656/rgb.png</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>1280</width>
+		<height>720</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>cup</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>840</xmin>
+			<ymin>105</ymin>
+			<xmax>1068</xmax>
+			<ymax>321</ymax>
+		</bndbox>
+	</object>
+</annotation>

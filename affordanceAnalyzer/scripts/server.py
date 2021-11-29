@@ -12,7 +12,6 @@ import matplotlib.gridspec as gridspec
 from affordance_analyzer.srv import *
 from std_msgs.msg import MultiArrayDimension
 import rospy
-from cameraService.cameraClient import CameraClient
 
 import caffe
 
@@ -85,13 +84,14 @@ class AffordanceAnalyzer(object):
             masks_list.append(object_mask_list)
 
         masks = np.array(masks_list)
+        rois_class_score = np.array(rois_class_score).flatten()
 
         try:
-            return rois_final, rois_class_ind, masks
+            return rois_final, rois_class_ind, masks, rois_class_score
         except:
             return 0
 
-    def sendResults(self, bbox, objects, masks):
+    def sendResults(self, bbox, objects, masks, scores):
         intToLabel = {0: 'class', 1: 'height', 2: 'width'}
         msg = getAffordanceSrvResponse()
 
@@ -114,17 +114,20 @@ class AffordanceAnalyzer(object):
         # constructing object detection class message
         msg.object.data = objects.flatten().tolist()
 
+        # constructing the scores message
+        msg.confidence.data = scores.flatten().tolist()
+
         return msg
 
     def analyzeAffordance(self, msg):
-        cam = CameraClient()
-        img = cam.getRGB()
+
+        img = np.frombuffer(msg.img.data, dtype=np.uint8).reshape(msg.img.height, msg.img.width, -1)
 
         self.CONF_THRESHOLD = msg.confidence_threshold.data
 
         print("Analyzing affordance with confidence threshold: ", self.CONF_THRESHOLD)
         try:
-            bbox, objects, masks = self.run_affordance_net(img, CONF_THRESHOLD=self.CONF_THRESHOLD)
+            bbox, objects, masks, scores = self.run_affordance_net(img, CONF_THRESHOLD=self.CONF_THRESHOLD)
             bbox = bbox[:,1:]
             m = masks[0]
             for i in range(len(masks)-1):
@@ -136,16 +139,18 @@ class AffordanceAnalyzer(object):
             self.bbox = bbox
             self.objects = objects
             self.masks = masks
+            self.scores = scores
         except:
             bbox = np.zeros((1, 4))
             objects = np.zeros((1,1))
             masks = np.zeros((1, 10, 244, 244))
+            scores = np.zeros(1)
 
         return runAffordanceSrvResponse()
 
     def getAffordance(self, msg):
 
-        return self.sendResults(self.bbox, self.objects, self.masks)
+        return self.sendResults(self.bbox, self.objects, self.masks, self.scores)
 
     def startAffordance(self, msg):
         prototxt = self.root_path + '/models/pascal_voc/VGG16/faster_rcnn_end2end/test.prototxt'

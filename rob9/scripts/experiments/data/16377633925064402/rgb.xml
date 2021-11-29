@@ -1,0 +1,26 @@
+<annotation>
+	<folder>16377633925064402</folder>
+	<filename>rgb.png</filename>
+	<path>/home/albert/Documents/Aalborg_Universitet/9_Semester/project/code/src/ROB9/rob9/scripts/experiments/data/16377633925064402/rgb.png</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>1280</width>
+		<height>720</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>spatula</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>748</xmin>
+			<ymin>49</ymin>
+			<xmax>1058</xmax>
+			<ymax>548</ymax>
+		</bndbox>
+	</object>
+</annotation>

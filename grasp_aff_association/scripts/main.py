@@ -10,6 +10,7 @@ import open3d as o3d
 import rospy
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped, Pose
+import sensor_msgs.point_cloud2 as pc2
 
 # ROB9
 from cameraService.cameraClient import CameraClient
@@ -156,60 +157,35 @@ def fuse_grasp_affordance_6DOF(points, grasps_data, visualize=False, search_dist
 def handle_get_grasps(req):
     global rate
 
-    VISUALIZE = True
+    VISUALIZE = False
     RERUN_AFFORDANCE = True
+
+    no_objects = int(req.masks.layout.dim[0].size / 10)
+    masks = np.asarray(req.masks.data).reshape((no_objects, int(req.masks.layout.dim[0].size / no_objects), req.masks.layout.dim[1].size, req.masks.layout.dim[2].size))
+    masks = masks.astype(np.uint8)
+    objects = np.asarray(req.objects.data)
+
+    #graspData = GraspGroup(grasps = req.grasps)
+    graspData = GraspGroup().fromGraspGroupSrv(req)
+
+    rows = int(req.cloud_uv.layout.dim[0].size / req.cloud_uv.layout.dim[1].size)
+    cols = int(req.cloud_uv.layout.dim[1].size)
+
+    cloud_uv = np.array(req.cloud_uv.data).astype(int)
+    cloud_uv = np.reshape(cloud_uv, (rows, cols))
+
+    # Get cloud data from ros_cloud
+    field_names = [field.name for field in req.cloud.fields]
+    cloud_data = list(pc2.read_points(req.cloud, skip_nans=True, field_names = field_names))
+
+    xyz = [(x, y, z) for x, y, z in cloud_data ] # get xyz
+    cloud = np.array(xyz)
 
     if not rospy.is_shutdown():
 
-        # initialize the camera client
-        cam = CameraClient()
         pub = rospy.Publisher("/Daniel", Path, queue_size=1)
 
-        print('Capturing new scene...')
-        cam.captureNewScene()
-
-        # Get point cloud and uv indexes for translating from image to point
-        # cloud.
-        cloud, _ = cam.getPointCloudStatic()
-        cloud_uv = cam.getUvStatic()
-
-        # Get grasps from grasp generator
-        graspClient = GraspingGeneratorClient()
-
-        collision_thresh = 0.01 # Collision threshold in collision detection
-        num_view = 300 # View number
-        score_thresh = 0.0 # Remove every grasp with scores less than threshold
-        voxel_size = 0.2
-
-        graspClient.setSettings(collision_thresh, num_view, score_thresh, voxel_size)
-
-        # Load the network with GPU (True or False) or CPU
-        graspClient.start(GPU=True)
-
-        graspData = graspClient.getGrasps()
-
-        print("Got ", len(graspData), " grasps, v2")
-
-        print('Getting affordance results...')
-        affClient = AffordanceClient()
-
-        if RERUN_AFFORDANCE:
-            affClient.start(GPU=False)
-            _ = affClient.run(CONF_THRESHOLD = 0.5)
-
-        _, _ = affClient.getAffordanceResult()
-        affClient.processMasks(conf_threshold = 40, erode_kernel = (11,11))
-
-        masks = affClient.masks
-        objects = affClient.objects
-
-        #if VISUALIZE:
-        #    affClient.visualizeBBox()
-        #    AffordanceClient.visualizeMasks()
-
         # run through all objects found by affordance net
-        graspObjects = None
-        del graspObjects
         graspObjects = GraspGroup(grasps = [])
 
         affordance_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9]
@@ -265,7 +241,7 @@ def main():
     print("Setting up grasp affordance association service...")
 
     rospy.init_node('grasp_affordance_association', anonymous=True)
-    grasp_server = rospy.Service('get_grasps', graspGroupSrv, handle_get_grasps)
+    grasp_server = rospy.Service('/grasp_affordance_association/associate', graspGroupSrv, handle_get_grasps)
 
     rate = rospy.Rate(5)
 

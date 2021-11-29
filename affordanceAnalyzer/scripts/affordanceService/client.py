@@ -7,6 +7,9 @@ import rospy
 import cv2
 import numpy as np
 
+from sensor_msgs.msg import Image
+from std_msgs.msg import Float32
+
 from cameraService.cameraClient import CameraClient
 from affordance_analyzer.srv import *
 
@@ -19,6 +22,7 @@ class AffordanceClient(object):
         self.masks = None
         self.bbox = None
         self.objects = None
+        self.scores = None
         self.GPU = False
 
         self.OBJ_CLASSES = ('__background__', 'bowl', 'tvm', 'pan', 'hammer', 'knife', 'cup', 'drill', 'racket', 'spatula', 'bottle')
@@ -44,13 +48,16 @@ class AffordanceClient(object):
 
         return response.status.data
 
-    def run(self, CONF_THRESHOLD = 0.7):
+    def run(self, img, CONF_THRESHOLD = 0.7):
         rospy.wait_for_service("/affordance/run")
         runAffordanceNetService = rospy.ServiceProxy("/affordance/run", runAffordanceSrv)
-        msg = runAffordanceSrv()
-        msg.data = CONF_THRESHOLD
-        response = runAffordanceNetService(msg)
-        print(response)
+
+        imgMsg = Image()
+        imgMsg.height = img.shape[0]
+        imgMsg.width = img.shape[1]
+        imgMsg.data = img.flatten().tolist()
+
+        response = runAffordanceNetService(imgMsg, Float32(CONF_THRESHOLD))
 
         return response.success.data
 
@@ -59,34 +66,26 @@ class AffordanceClient(object):
         s1 = time.time()
         rospy.wait_for_service("/affordance/result")
         affordanceNetService = rospy.ServiceProxy("/affordance/result", getAffordanceSrv)
-        print("Waiting for affordance service took: ", (time.time() - s1) * 1000 )
+        #print("Waiting for affordance service took: ", (time.time() - s1) * 1000 )
 
         s2 = time.time()
         msg = getAffordanceSrv()
         msg.data = True
         response = affordanceNetService(msg)
-        print("Receiving data from affordance service took: ", (time.time() - s2) * 1000 )
+        #print("Receiving data from affordance service took: ", (time.time() - s2) * 1000 )
 
         s3 = time.time()
         no_objects = int(response.masks.layout.dim[0].size / 10)
         self.no_objects = no_objects
         masks = np.asarray(response.masks.data).reshape((no_objects, int(response.masks.layout.dim[0].size / no_objects), response.masks.layout.dim[1].size, response.masks.layout.dim[2].size)) #* 255
         self.masks = masks.astype(np.uint8)
-
         self.bbox = np.asarray(response.bbox.data).reshape((-1,4))
-
         self.objects = np.asarray(response.object.data)
-        print('----------Affordance results---------')
-        print('Shape: ' + str(self.masks.shape))
-        print('Data type: ' + str(self.masks.dtype))
-        print('Bounding box: ' + str(self.bbox))
-        print('Objects: ' + str(self.objects))
+        self.scores = np.asarray(response.confidence.data)
 
-        print("Processing affordance message took: ", (time.time() - s3) * 1000 )
+        return self.masks, self.objects, self.scores, self.bbox
 
-        return self.masks, self.objects
-
-    def visualizeBBox(self):
+    def visualizeBBox(self, img):
 
         if self.bbox is None:
             print("No bounding boxes to visualize")
@@ -94,11 +93,6 @@ class AffordanceClient(object):
         if self.bbox.shape[0] < 0:
             print("No bounding boxes to visualize")
             return 0
-
-        print("Visualizing ", self.bbox.shape[0], " bounding boxes")
-
-        cam = CameraClient()
-        img = copy.deepcopy(cam.rgb)
 
         for i in range(self.bbox.shape[0]):
 
@@ -110,10 +104,7 @@ class AffordanceClient(object):
             img = cv2.rectangle(img, (x1, y1), (x1+w, y1+h), (0, 0, 255), 3)
             img = cv2.putText(img, str(self.OBJ_CLASSES[self.objects[i]]), (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 3, 2)
 
-        cv2.imshow("BBox's", img)
-        cv2.waitKey(0)
-
-        return 1
+        return img
 
     def processMasks(self, conf_threshold = 50, erode_kernel=(21,21)):
         if self.masks is None:
@@ -135,7 +126,7 @@ class AffordanceClient(object):
                     self.masks[i,j] = m
         return 1
 
-    def visualizeMasks(self):
+    def visualizeMasks(self, img):
 
         if self.masks is None:
             print("No masks available to visualize")
@@ -145,9 +136,6 @@ class AffordanceClient(object):
             return 0
 
         print("Visualizing ", self.masks.shape[0] * self.masks.shape[1], " masks for ", self.masks.shape[0], " objects.")
-
-        cam = CameraClient()
-        img = copy.deepcopy(cam.rgb)
 
         colors = [(0,0,205), (34,139,34), (192,192,128), (165, 42, 42), (128, 64, 128),
                 (204, 102, 0), (184, 134, 11), (0, 153, 153), (0, 134, 141), (184, 0, 141)]
@@ -160,7 +148,4 @@ class AffordanceClient(object):
                     full_mask[m] = colors[j]
         img = cv2.addWeighted(img, 1.0, full_mask, 0.7, 0)
 
-        cv2.imshow("masks", img)
-        cv2.waitKey(0)
-
-        return 1
+        return img
