@@ -274,6 +274,11 @@ if __name__ == '__main__':
     cloud_uv = cam.getUvStatic()
     img = cam.getRGB()
 
+    cloud, cloudColor = cam.getPointCloudStatic()
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(cloud)
+    pcd.colors = o3d.utility.Vector3dVector(cloudColor)
+
     print("Generating grasps")
 
     # Get grasps from grasp generator
@@ -290,6 +295,7 @@ if __name__ == '__main__':
     graspClient.start(GPU=True)
 
     graspData = graspClient.getGrasps()
+    #visualizeGrasps6DOF(pcd, graspData)
 
     cloud, cloudColor = cam.getPointCloudStatic()
     pcd = o3d.geometry.PointCloud()
@@ -306,8 +312,8 @@ if __name__ == '__main__':
     # Run affordance analyzer
     affClient = AffordanceClient()
 
-    #affClient.start(GPU=False)
-    #_ = affClient.run(img, CONF_THRESHOLD = 0.3)
+    affClient.start(GPU=False)
+    _ = affClient.run(img, CONF_THRESHOLD = 0.02)
 
     _, _, _, _ = affClient.getAffordanceResult()
 
@@ -342,6 +348,8 @@ if __name__ == '__main__':
     # 7 = pound
     # 8 = support
     # 9 = wide grasp
+
+    affordance_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
     # Select affordance label to grasp
 
@@ -397,7 +405,7 @@ if __name__ == '__main__':
     goal_msg.pose = goal_poses[1].pose
     pub_grasp.publish(goal_msg) # visualize grasp pose in RVIZ
 
-    input("Press Enter when you are ready to move the robot")
+    #input("Press Enter when you are ready to move the robot")
     for i in range(3):
         send_trajectory_to_rviz(plans[i])
         moveit.execute(plans[i])
@@ -406,7 +414,7 @@ if __name__ == '__main__':
             rospy.sleep(1)
         print("I have grasped!")
 
-    input("Press Enter when you are ready to move the robot to the handover pose")
+    #input("Press Enter when you are ready to move the robot to the handover pose")
     moveit.moveToNamed("ready")
     moveit.moveToNamed("handover")
     input("Press Enter when you are ready to move the robot back to the ready pose")

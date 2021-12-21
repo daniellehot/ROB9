@@ -104,11 +104,61 @@ def send_trajectory_to_rviz(plan):
 
 
 def callback(msg):
-    global resp_trajectories
+    global resp_trajectories, grasps_affordance
     #global receivedGripperCommand
     #print("Callback")
     #print("message data " + str(msg.data))
     id = msg.data
+
+    # 1 = contain
+    # 2 = cut
+    # 3 = display
+    # 4 = engine
+    # 5 = grasp
+    # 6 = hit
+    # 7 = pound
+    # 8 = support
+    # 9 = wide grasp
+
+    affordance_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+    # Select affordance label to grasp
+    #print(grasps_affordance[:].affordance_id)
+    graspObj = GraspGroup(grasps = copy.deepcopy(grasps_affordance.getgraspsByTool(id = id) ))
+    graspAffordance = GraspGroup(grasps = [])
+
+    for affordance_id in affordance_ids:
+        if affordance_id != 5 and affordance_id != 9:
+            graspAffordance.combine(GraspGroup(grasps = copy.deepcopy(graspObj.getgraspsByAffordanceLabel(label = affordance_id) ) ))
+        #if affordance_id == 5 or affordance_id == 9:
+        #    graspObj.combine(GraspGroup(grasps = copy.deepcopy(grasps_affordance.getgraspsByAffordanceLabel(label = affordance_id) ) ))
+    grasps_affordance = graspAffordance
+    #visualizeGrasps6DOF(pcd, grasps_affordance)
+
+    grasp_waypoints_path = computeWaypoints(grasps_affordance, offset = 0.1)
+
+
+
+
+    #visualizeGrasps6DOF(pcd, GraspGroup(grasps = graspObjects.fromPath(grasp_waypoints_path)))
+
+    azimuthAngleLimit = [-1*math.pi, 1*math.pi]
+    polarAngleLimit = [0, 0.5*math.pi]
+    #grasp_waypoints_path = filterBySphericalCoordinates(grasp_waypoints_path, azimuth = azimuthAngleLimit, polar = polarAngleLimit)
+
+    print("Calling the trajectory service")
+    rospy.wait_for_service('get_trajectories')
+    get_trajectories = rospy.ServiceProxy('get_trajectories', GetTrajectories)
+    resp_trajectories = get_trajectories(grasp_waypoints_path)
+    print("I have received a trajectory server response ")
+
+    id_list_duplicates = []
+    for i in range(len(resp_trajectories.trajectories.trajectories)):
+        id_list_duplicates.append(resp_trajectories.trajectories.trajectories[i].joint_trajectory.header.frame_id)
+    id_list = list(dict.fromkeys(id_list_duplicates))
+    print("id_list_duplicates " + str(id_list_duplicates))
+    print("id_list " + str(id_list))
+
     id = str(id)
     plans = []
     goal_poses = []
@@ -136,7 +186,8 @@ def callback(msg):
     pub_grasp.publish(goal_msg)
 
     #rospy.sleep(6.)
-    raw_input("Press Enter when you are ready to move the robot")
+    #raw_input("Press Enter when you are ready to move the robot")
+    #input("Press Enter when you are ready to move the robot")
     for i in range(3):
         send_trajectory_to_rviz(plans[i])
         #raw_input("Press Enter when you are ready to move the robot")
@@ -148,11 +199,13 @@ def callback(msg):
             gripper_pub.publish(close_gripper_msg)
             rospy.sleep(1)
         print("I have grasped!")
-    raw_input("Press Enter when you are ready to move the robot to the handover pose")
+    #raw_input("Press Enter when you are ready to move the robot to the handover pose")
+    #input("Press Enter when you are ready to move the robot to the handover pose")
     #move_to_handover()
     moveit.moveToNamed("ready")
     moveit.moveToNamed("handover")
-    raw_input("Press Enter when you are ready to move the robot back to the ready pose")
+    #raw_input("Press Enter when you are ready to move the robot back to the ready pose")
+    input("Press Enter when you are ready to move the robot back to the ready pose")
 
     moveit.moveToNamed("ready")
     gripper_pub.publish(open_gripper_msg)
@@ -289,6 +342,7 @@ def sortByOrientationDifference(poses):
         waypoints_sorted[i] = waypoints[index]
 
 if __name__ == '__main__':
+    global grasps_affordance
     demo = std_msgs.msg.Bool()
     demo.data = False
     if len(sys.argv) > 1:
@@ -312,6 +366,8 @@ if __name__ == '__main__':
     rospy.sleep(0.1)
     rospy.sleep(2)
 
+    vid_capture = cv2.VideoCapture(0)
+
     reset_gripper_msg = std_msgs.msg.Int8()
     reset_gripper_msg.data = 0
     activate_gripper_msg = std_msgs.msg.Int8()
@@ -329,6 +385,7 @@ if __name__ == '__main__':
     gripper_pub.publish(activate_gripper_msg)
     gripper_pub.publish(open_gripper_msg)
     gripper_pub.publish(pinch_gripper_msg)
+    moveit.moveToNamed("ready")
 
     print("Services init")
 
@@ -339,6 +396,26 @@ if __name__ == '__main__':
     cloud, _ = cam.getPointCloudStatic()
     cloud_uv = cam.getUvStatic()
     img = cam.getRGB()
+
+    width = 1280
+    height = 960
+    h_divisions = 4
+    w_divisions = 2
+    viz_h_unit = int(height / h_divisions)
+    viz_w_unit = viz_h_unit
+
+    while(True):
+     # Capture each frame of webcam video
+     ret,frame = vid_capture.read()
+     frame = cv2.resize(frame, (width, height))
+     viz_box_empty = np.zeros((viz_h_unit))
+     cv2.imshow("My cam video", frame)
+     # Close and break the loop after pressing "x" key
+     if cv2.waitKey(1) &0XFF == ord('x'):
+         break
+    cv2.destroyAllWindows()
+    vid_capture.release()
+    exit()
 
     print("Generating grasps")
 
@@ -364,17 +441,20 @@ if __name__ == '__main__':
     affClient = AffordanceClient()
 
     affClient.start(GPU=False)
-    _ = affClient.run(img, CONF_THRESHOLD = 0.5)
+    _ = affClient.run(img, CONF_THRESHOLD = 0.0)
 
     _, _, _, _ = affClient.getAffordanceResult()
 
     _ = affClient.processMasks(conf_threshold = 40, erode_kernel=(11,11))
 
     # Visualize object detection and affordance segmentation to confirm
-    cv2.imshow("Masks", affClient.visualizeMasks(img))
-    cv2.waitKey(0)
-    cv2.imshow("BBox's", affClient.visualizeBBox(img))
-    cv2.waitKey(0)
+    img = affClient.visualizeMasks(img)
+    #cv2.imshow("Masks", affClient.visualizeMasks(img))
+    #cv2.waitKey(0)
+    #cv2.destroyAllWindows()
+    #cv2.imshow("BBox's", affClient.visualizeBBox(img))
+    #cv2.waitKey(0)
+    #cv2.destroyAllWindows()
 
     masks = affClient.masks
     objects = affClient.objects
@@ -386,12 +466,43 @@ if __name__ == '__main__':
 
     grasps_affordance.sortByScore()
     grasps_affordance.thresholdByScore(0.0)
+
+    cloud, cloudColor = cam.getPointCloudStatic()
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(cloud)
+    pcd.colors = o3d.utility.Vector3dVector(cloudColor)
+    #visualizeGrasps6DOF(pcd, grasps_affordance)
+    print("Ready for command")
+
+    """
+    # 1 = contain
+    # 2 = cut
+    # 3 = display
+    # 4 = engine
+    # 5 = grasp
+    # 6 = hit
+    # 7 = pound
+    # 8 = support
+    # 9 = wide grasp
+
+    affordance_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+    # Select affordance label to grasp
+    #print(grasps_affordance[:].affordance_id)
+    graspObj = GraspGroup(grasps = [])
+
+    for affordance_id in affordance_ids:
+        if affordance_id != 5 and affordance_id != 9:
+            graspObj.combine(GraspGroup(grasps = copy.deepcopy(grasps_affordance.getgraspsByAffordanceLabel(label = affordance_id) ) ))
+        #if affordance_id == 5 or affordance_id == 9:
+        #    graspObj.combine(GraspGroup(grasps = copy.deepcopy(grasps_affordance.getgraspsByAffordanceLabel(label = affordance_id) ) ))
+    grasps_affordance = graspObj
+    visualizeGrasps6DOF(pcd, grasps_affordance)
+
     grasp_waypoints_path = computeWaypoints(grasps_affordance, offset = 0.1)
 
-    #cloud, cloudColor = cam.getPointCloudStatic()
-    #pcd = o3d.geometry.PointCloud()
-    #pcd.points = o3d.utility.Vector3dVector(cloud)
-    #pcd.colors = o3d.utility.Vector3dVector(cloudColor)
+
+
 
     #visualizeGrasps6DOF(pcd, GraspGroup(grasps = graspObjects.fromPath(grasp_waypoints_path)))
 
@@ -419,6 +530,7 @@ if __name__ == '__main__':
     #print("----------------------------")
     #print("----------------------------")
     #print(resp_trajectories.trajectories_poses.poses[0])
+    """
 
 
     try:

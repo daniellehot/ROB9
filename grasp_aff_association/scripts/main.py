@@ -75,7 +75,8 @@ def fuse_grasp_affordance_6DOF(points, grasps_data, visualize=False, search_dist
     VISUALIZE = False
 
     # only perform grasp affordance association if mask has any points
-    if points.shape[0] > 4:
+    print(points.shape)
+    if points.shape[0] > 15:
 
         cloud = o3d.geometry.PointCloud()
         cloud.points = o3d.utility.Vector3dVector(points)
@@ -218,9 +219,12 @@ def handle_get_grasps(req):
                         cloud_masked.append(cloud[k])
                 cloud_masked = np.array(cloud_masked)
 
+                associated_grasps_list = []
                 associated_grasps_list = fuse_grasp_affordance_6DOF(cloud_masked, graspData, visualize=False)
                 if len(associated_grasps_list) > 0:
-                    associated_grasps = GraspGroup(grasps = associated_grasps_list)
+                    associated_grasps = GraspGroup(grasps = [])
+                    associated_grasps = GraspGroup(grasps = copy.deepcopy(associated_grasps_list))
+                    print(objects[i], affordance_id)
 
                     associated_grasps.setToolId(int(objects[i]))
                     associated_grasps.setAffordanceID(affordance_id)
@@ -230,19 +234,8 @@ def handle_get_grasps(req):
 
             print('Nr. of grasps found: ' + str(len(graspObjects.getGraspsByInstance(obj_instance))) + '  For object class: ' + str(objects[i]))
 
-            if VISUALIZE:
-                cloud, cloudColor = cam.getPointCloudStatic()
-                pcd = o3d.geometry.PointCloud()
-                pcd.points = o3d.utility.Vector3dVector(cloud)
-                pcd.colors = o3d.utility.Vector3dVector(cloudColor)
-
-                visualizeGrasps6DOF(pcd, GraspGroup(grasps = graspObjects.getGraspsByInstance(obj_instance)))
-
             obj_instance += 1
 
-
-
-        print(len(graspObjects), " in total")
         #graspObjects = GraspGroup(grasps = graspObjects.getgraspsByAffordanceLabel(7))
 
         camera_frame = "ptu_camera_color_optical_frame"
