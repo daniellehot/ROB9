@@ -108,3 +108,39 @@ docker build --build-arg INCUBATOR_VER=$(date +%Y%m%d-%H%M%S) -t huchiewuchie/af
 ```
 docker run --name affordancenet -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix/:/tmp/.X11-unix --net=host --gpus all --rm huchiewuchie/affordancenet-rob9 /bin/bash
 ```
+
+## Affordance-Net-Context
+
+This package is a docker image of the affordancenet from the implementation found here: https://github.com/ivalab/affordanceNet_Context by Fu-Jen Chu, Ruinian Xu, Chao Tangand Patricio A. Vela.
+
+### B. Build the docker image
+
+1.
+```
+cd ROB9ROOTDIR/docker/affordancenet_context/affordancenet_context-base
+```
+
+2. Download the pre-trained weights from
+here: https://www.dropbox.com/s/4wai7v9j6jp7pge/vgg16_faster_rcnn_iter_110000_pam_7attribute.caffemodel?dl=0
+and save it to: ROB9ROOTDIR/docker/affordancenet_context/affordancenet_context-base/vgg16_faster_rcnn_iter_110000_pam_7attribute.caffemodel
+
+3. Change directory back to docker base folder
+```
+cd ROB9ROOTDIR/docker/
+```
+
+4. Build affordancenet_context-base containing the implementation
+```
+docker build --build-arg INCUBATOR_VER=$(date +%Y%m%d-%H%M%S) -t huchiewuchie/affordancenet_context-base affordancenet_context/affordancenet_context-base
+```
+
+5. build affordancenet_context-rob9 docker image with the ROB9 files
+```
+docker build --build-arg INCUBATOR_VER=$(date +%Y%m%d-%H%M%S) -t huchiewuchie/affordancenet_context-rob9 -f affordancenet_context/affordancenet_context-rob9/dockerfile ../
+```
+
+### C. Run the docker image
+
+```
+docker run --name affordancenetcontext-rob9 -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix/:/tmp/.X11-unix --net=host --gpus all --rm huchiewuchie/affordancenet_context-rob9 /bin/bash
+```

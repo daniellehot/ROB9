@@ -24,8 +24,39 @@ class AffordanceClient(object):
         self.objects = None
         self.scores = None
         self.GPU = False
+        self.name = self.getName()
 
-        self.OBJ_CLASSES = ('__background__', 'bowl', 'tvm', 'pan', 'hammer', 'knife', 'cup', 'drill', 'racket', 'spatula', 'bottle')
+        if self.name == "affordancenet":
+            self.noObjClass = 11
+            self.noLabelClass = 10
+            self.OBJ_CLASSES = ('__background__', 'bowl', 'tvm', 'pan', 'hammer', 'knife',
+                                    'cup', 'drill', 'racket', 'spatula', 'bottle')
+            self.OBJ_NAME_TO_ID = {'__background__': 0, 'bowl': 1, 'tvm': 2, 'pan': 3,
+                                'hammer': 4, 'knife': 5, 'cup': 6, 'drill': 7,
+                                'racket': 8, 'spatula': 9, 'bottle': 10}
+            self.labelsToNames = {'__background__': 0, 'contain': 1, 'cut': 2, 'display': 3, 'engine': 4, 'grasp': 5, 'hit': 6, 'pound': 7, 'support': 8, 'w-grasp': 9}
+            self.graspLabels = [5, 9]
+            self.functionalLabels = [1, 2, 3, 4, 6, 7, 8]
+
+        elif self.name == "affordancenet_context":
+            self.noObjClass = 2
+            self.noLabelClass = 8
+            self.OBJ_CLASSES = ('__background__', 'objectness')
+            self.OBJ_NAME_TO_ID = {'__background__': 0, 'objectness': 1}
+            self.labelsToNames = {'__background__': 0, 'grasp': 1, 'cut': 2, 'scoop': 3, 'contain': 4, 'pound': 5, 'support': 6, 'w-grasp': 7}
+            self.graspLabels = [1, 7]
+            self.functionalLabels = [2, 3, 4, 5, 6]
+
+    def getName(self):
+
+        rospy.wait_for_service("/affordance/name")
+        nameService = rospy.ServiceProxy("/affordance/name", getNameSrv)
+        msg = getNameSrv()
+        msg.data = True
+        response = nameService(msg)
+
+        return response.name.data
+
 
     def start(self, GPU=False):
         self.GPU = GPU
@@ -75,7 +106,7 @@ class AffordanceClient(object):
         #print("Receiving data from affordance service took: ", (time.time() - s2) * 1000 )
 
         s3 = time.time()
-        no_objects = int(response.masks.layout.dim[0].size / 10)
+        no_objects = int(response.masks.layout.dim[0].size / self.noLabelClass)
         self.no_objects = no_objects
         masks = np.asarray(response.masks.data).reshape((no_objects, int(response.masks.layout.dim[0].size / no_objects), response.masks.layout.dim[1].size, response.masks.layout.dim[2].size)) #* 255
         self.masks = masks.astype(np.uint8)
@@ -134,8 +165,6 @@ class AffordanceClient(object):
         if self.masks.shape[0] < 0:
             print("No masks available to visualize")
             return 0
-
-        print("Visualizing ", self.masks.shape[0] * self.masks.shape[1], " masks for ", self.masks.shape[0], " objects.")
 
         colors = [(0,0,205), (34,139,34), (192,192,128), (165, 42, 42), (128, 64, 128),
                 (204, 102, 0), (184, 134, 11), (0, 153, 153), (0, 134, 141), (184, 0, 141)]

@@ -75,7 +75,7 @@ def visualizeGrasps6DOF(pointcloud, graspGroup):
 
         o3d_gripper_geom.append(gripper)
 
-    o3d.visualization.draw_geometries([pointcloud, *o3d_gripper_geom])
+    #o3d.visualization.draw_geometries([pointcloud, *o3d_gripper_geom])
 
     return o3d_gripper_geom
 
@@ -83,6 +83,33 @@ def create_mesh_box(width, height, depth, dx=0, dy=0, dz=0):
     ''' Author: chenxi-wang
     Create box instance with mesh representation.
     '''
+    box = o3d.geometry.TriangleMesh()
+    vertices = np.array([[0,0,0],
+                         [width,0,0],
+                         [0,0,depth],
+                         [width,0,depth],
+                         [0,height,0],
+                         [width,height,0],
+                         [0,height,depth],
+                         [width,height,depth]])
+    vertices[:,0] += dx
+    vertices[:,1] += dy
+    vertices[:,2] += dz
+    triangles = np.array([[4,7,5],[4,6,7],[0,2,4],[2,6,4],
+                          [0,1,2],[1,3,2],[1,5,7],[1,7,3],
+                          [2,3,7],[2,7,6],[0,4,1],[1,4,5]])
+    box.vertices = o3d.utility.Vector3dVector(vertices)
+    box.triangles = o3d.utility.Vector3iVector(triangles)
+    return box
+
+def create_plane(p1, p2, p3, p4):
+    """ input:  p1  -   numpy array (x1, y1, z1)
+                p2  -   numpy array (x2, y2, z2)
+                p3  -   numpy array (x3, y3, z3)
+                p4  -   numpy array (x4, y4, z4)
+        output: box -   o3d mesh
+    """ """not implemented yet !!!"""
+    depth = 0.01 # in meters
     box = o3d.geometry.TriangleMesh()
     vertices = np.array([[0,0,0],
                          [width,0,0],
@@ -118,13 +145,75 @@ def viz_boundingbox(point_min, point_max):
     lines_to_viz = [[0, 1], [0, 2], [1, 3], [2, 3], [4, 5], [4, 6], [5, 7], [6, 7],
              [0, 4], [1, 5], [2, 6], [3, 7]]
 
-    colors = [[0, 0, 0] for i in range(len(lines_to_viz))]
+    colors = [[1, 0, 0] for i in range(len(lines_to_viz))]
     line_set = o3d.geometry.LineSet()
     line_set.points = o3d.utility.Vector3dVector(points_to_viz)
     line_set.lines = o3d.utility.Vector2iVector(lines_to_viz)
     line_set.colors = o3d.utility.Vector3dVector(colors)
 
     return line_set
+
+def viz_oriented_boundingbox(corners):
+
+    b1,b2,b4,t1,t3,t4,t2,b3 = corners
+    points_to_viz = [b1, b2, b4, t1, t3, t4, t2, b3]
+
+    lines_to_viz = [[0, 1], [0, 2], [1,7], [7, 2],
+                    [3, 6], [3, 5], [6, 4], [5, 4],
+                    [0, 3], [1, 6], [7, 4], [2, 5]]
+
+    colors = [[1, 0, 0] for i in range(len(lines_to_viz))]
+    line_set = o3d.geometry.LineSet()
+    line_set.points = o3d.utility.Vector3dVector(points_to_viz)
+    line_set.lines = o3d.utility.Vector2iVector(lines_to_viz)
+    line_set.colors = o3d.utility.Vector3dVector(colors)
+
+    return line_set
+
+def vizualizeLine(p1, p2):
+    """ Input:  p1  -   numpy array (x, y, z)
+                p2  -   numpy array (x, y, z)
+        Output: lineset -   o3d.geometry.Lineset
+    """
+    points_to_viz = [p1, p2]
+
+    lines_to_viz = [[0, 1]]
+
+    colors = [[1, 0, 1] for i in range(len(lines_to_viz))]
+    line_set = o3d.geometry.LineSet()
+    line_set.points = o3d.utility.Vector3dVector(points_to_viz)
+    line_set.lines = o3d.utility.Vector2iVector(lines_to_viz)
+    line_set.colors = o3d.utility.Vector3dVector(colors)
+
+    return line_set
+
+def visualizeFrame(x, y, z, translation, size = 0.1):
+    """ Input:  x   -   numpy array (x, y, z) or column vector
+                y   -   numpy array (x, y, z) or column vector
+                z   -   numpy array (x, y, z) or column vector
+                translation -   numpy array (x, y, z) or column vector
+                                the center point of the frame
+                size        -   float, length of lines in meters
+        output: lines   -   open3d.geometry.LineSet()
+    """
+
+    translation = translation.flatten()
+
+    x = (x.flatten() * size) + translation
+    y = (y.flatten() * size) + translation
+    z = (z.flatten() * size) + translation
+    points = [translation, x, y, z]
+    print(points)
+    lines_to_viz = [[0, 1], [0, 2], [0, 3]]
+    colors = [[1, 0 , 0], [0, 1, 0], [0, 0, 1]]
+
+    line_set = o3d.geometry.LineSet()
+    line_set.points = o3d.utility.Vector3dVector(points)
+    line_set.lines = o3d.utility.Vector2iVector(lines_to_viz)
+    line_set.colors = o3d.utility.Vector3dVector(colors)
+
+    return line_set
+
 
 # Make points ready to visualize in open3d pointcloud with color
 def viz_color_pointcloud(points, color):

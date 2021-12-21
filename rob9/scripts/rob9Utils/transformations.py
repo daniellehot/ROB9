@@ -10,10 +10,34 @@ from std_msgs.msg import String
 from rob9.srv import tf2TransformPoseStampedSrv, tf2TransformPoseStampedSrvResponse
 from rob9.srv import tf2TransformPathSrv, tf2TransformPathSrvResponse
 
-def transformToFrame(pose, newFrame):
+def transformToFrame(pose, newFrame, currentFrame = "ptu_camera_color_optical_frame"):
     """ input:  pose - geometry_msgs.PoseStamped()
+                        numpy array (x, y, z)
+                        numpy array (x, y, z, qx, qy, qz, qw)
                 newFrame - desired frame for pose to be transformed into.
         output: transformed_pose_msg - pose in newFrame """
+
+    if isinstance(pose, (np.ndarray, np.generic) ):
+        npArr = pose
+
+        pose = PoseStamped()
+        pose.pose.position.x = npArr[0]
+        pose.pose.position.y = npArr[1]
+        pose.pose.position.z = npArr[2]
+
+        if npArr.shape[0] < 4: # no orientation provided:
+            pose.pose.orientation.w = 1
+            pose.pose.orientation.x = 0
+            pose.pose.orientation.y = 0
+            pose.pose.orientation.z = 0
+
+        else:
+            pose.pose.orientation.w = npArr[6]
+            pose.pose.orientation.x = npArr[3]
+            pose.pose.orientation.y = npArr[4]
+            pose.pose.orientation.z = npArr[5]
+        pose.header.frame_id = currentFrame
+
 
     pose.header.stamp = rospy.Time.now()
 
@@ -139,22 +163,30 @@ def unitVector(v):
 
     return v
 
-def quaternionMultiplyOld(q1, q2):
-    # q1
-    x0, y0, z0, w0 = q1[0], q1[1], q1[2], q1[3]
+def quaternionFromRotation(R):
+    """ Input:  R   -   3 x 3 numpy matrix or 2D list, rotation matrix
+        Output: q   -   1 x 4 numpy array, quaternion (x, y, z, w)
+        https://github.com/cgohlke/transformations/blob/master/transformations/transformations.py
+    """
 
-    # q2
-    x1, y1, z1, w1 = q2[0], q2[1], q2[2], q2[3]
+    # symmetric matrix K
+    K = np.array(
+        [
+            [R[0,0] - R[1,1] - R[2,2], 0.0, 0.0, 0.0],
+            [R[0,1] + R[1,0], R[1,1] - R[0,0] - R[2,2], 0.0, 0.0],
+            [R[0,2] + R[2,0], R[1,2] + R[2,1], R[2,2] - R[0,0] - R[1,1], 0.0],
+            [R[2,1] - R[1,2], R[0,2] - R[2,0], R[1,0] - R[0,1], R[0,0] + R[1,1] + R[2,2]],
+        ]
+    )
+    K /= 3.0
+    # quaternion is eigenvector of K that corresponds to largest eigenvalue
+    w, V = np.linalg.eigh(K)
+    q = V[[3, 0, 1, 2], np.argmax(w)]
+    if q[0] < 0.0:
+        numpy.negative(q, q)
 
-    # Computer the product of the two quaternions, term by term
-    Q0Q1_w = w0 * w1 - x0 * x1 - y0 * y1 - z0 * z1
-    Q0Q1_x = w0 * x1 + x0 * w1 + y0 * z1 - z0 * y1
-    Q0Q1_y = w0 * y1 - x0 * z1 + y0 * w1 + z0 * x1
-    Q0Q1_z = w0 * z1 + x0 * y1 - y0 * x1 + z0 * w1
-
-    # Create a 4 element array containing the final quaternion
-    final_quaternion = np.array([Q0Q1_x, Q0Q1_y, Q0Q1_z, Q0Q1_w])
-    return final_quaternion
+    q = np.flip(q) # reverse the array to get [x, y, z, w]
+    return q
 
 def eulerFromQuaternion(q):
     pass
@@ -182,7 +214,9 @@ def delta_orientation(pose1, pose2):
 """
 if __name__ == '__main__':
     print("Start")
-    quatToRot([0, 0, 0, 1])
+    R = quatToRot([0, 0, 0, 1])
+    q = quatFromRotation(R)
+    print("quaternion: ", q)
 
     q1 = [0, 0, 0, 1]
     print(quaternionConjugate(q1))

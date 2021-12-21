@@ -27,11 +27,6 @@ class CameraClient(object):
         self.serviceNameUV = self.baseService + "/pointcloud/static/uv"
         self.serviceNamePointcloud = self.baseService + "/pointcloud/static"
 
-        self.getRGB()
-        self.getDepth()
-        self.getUvStatic()
-        self.getPointCloudStatic()
-
     def captureNewScene(self):
         """ Tells the camera service to update the static data """
 

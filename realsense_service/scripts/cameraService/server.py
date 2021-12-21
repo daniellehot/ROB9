@@ -20,6 +20,9 @@ from ctypes import * # convert float to uint32
 cam_width = 1280
 cam_height = 720
 
+#cam_width = 640
+#cam_height = 360
+
 
 class RealsenseServer(object):
     """docstring for CameraServer."""
@@ -126,8 +129,11 @@ class RealsenseServer(object):
         self.frame = self.pipeline.wait_for_frames()
         self.aligned_frames = self.align.process(self.frame)
 
+        hole_filter = rs.hole_filling_filter(mode = 2)
+        dec_filter = rs.decimation_filter()
+
         self.framesRGB.append(self.aligned_frames.get_color_frame())
-        self.framesDepth.append(self.aligned_frames.get_depth_frame())
+        self.framesDepth.append(hole_filter.process(dec_filter.process(self.aligned_frames.get_depth_frame())))
 
         if len(self.framesRGB) > self.tempFilterSize:
             self.framesRGB.pop(0)
@@ -135,7 +141,7 @@ class RealsenseServer(object):
             self.framesDepth.pop(0)
 
         self.color_frame, self.depth_frame, self.color_image, self.depth_image = self.temporalFilter(self.framesRGB, self.framesDepth)
-        self.cloudGeometry, self.cloudColor, self.uv = self.generatePointcloud(depth_frame = self.depth_frame, color_frame = self.color_frame, color_image = self.color_image, maxDistanceMeters = 1.0, maxVertices = 40000)
+        self.cloudGeometry, self.cloudColor, self.uv = self.generatePointcloud(depth_frame = self.depth_frame, color_frame = self.color_frame, color_image = self.color_image, maxDistanceMeters = 1, maxVertices = 40000)
 
     def temporalFilter(self, framesRGB, framesDepth):
         """ Filters captured information using pyrealsense temporal filter """
@@ -155,7 +161,7 @@ class RealsenseServer(object):
         return filteredRGBFrame, filteredDepthFrame, filteredColor_image, filteredDepth_image
 
 
-    def generatePointcloud(self, depth_frame, color_frame, color_image, maxDistanceMeters = 1.0, maxVertices = 40000):
+    def generatePointcloud(self, depth_frame, color_frame, color_image, maxDistanceMeters = 0.5, maxVertices = 80000):
         """ Generate point cloud and update the dynamic point clouds """
 
         cloud = rs.pointcloud()

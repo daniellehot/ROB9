@@ -35,14 +35,16 @@ RUN pip install opencv-python==4.2.0.32
 # Compiling realsense-service for ROS
 ARG INCUBATOR_VER=unknown
 WORKDIR /ROB9/src
-#COPY realsense_service /ROB9/src/realsense_service
-COPY affordanceAnalyzer /ROB9/src/affordanceAnalyzer
-#COPY rob9 /ROB9/src/rob9
+COPY affordanceAnalyzer/package.xml /ROB9/src/affordanceAnalyzer/package.xml
+COPY affordanceAnalyzer/CMakeLists.txt /ROB9/src/affordanceAnalyzer/CMakeLists.txt
+COPY affordanceAnalyzer/setup.py /ROB9/src/affordanceAnalyzer/setup.py
+COPY affordanceAnalyzer/srv /ROB9/src/affordanceAnalyzer/srv
+COPY affordanceAnalyzer/scripts/affordancenet /ROB9/src/affordanceAnalyzer/scripts/affordancenet
+RUN cp /ROB9/src/affordanceAnalyzer/scripts/affordancenet/lib/test.py /affordance-net/lib/fast_rcnn/test.py
 WORKDIR /ROB9
 RUN /bin/bash -c '. /opt/ros/melodic/setup.bash; cd /ROB9; catkin_make'
 
 ################### Setting up the affordance net ros #########################
 
-RUN cp /ROB9/src/affordanceAnalyzer/scripts/lib/test.py /affordance-net/lib/fast_rcnn/test.py
 
 ENTRYPOINT source /ROB9/devel/setup.bash && export PYTHONPATH=/affordance-net/caffe-affordance-net/python:$PYTHONPATH && export QT_X11_NO_MITSHM=1 && /bin/bash

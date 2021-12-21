@@ -17,28 +17,11 @@ from cameraService.cameraClient import CameraClient
 from affordanceService.client import AffordanceClient
 from grasp_service.client import GraspingGeneratorClient
 import rob9Utils.transformations as transform
-from rob9Utils.visualize import visualizeGrasps6DOF
+from rob9Utils.visualize import visualizeGrasps6DOF, viz_boundingbox, viz_oriented_boundingbox, vizualizeLine
 from grasp_aff_association.srv import *
 from rob9Utils.graspGroup import GraspGroup
 from rob9Utils.grasp import Grasp
 from rob9.srv import graspGroupSrv, graspGroupSrvResponse
-
-# Merge list of masks, return as one greyscale image mask
-def merge_masks(masks, ids=[], visualize=False):
-    # loop here for all objects
-
-    mask_full = np.zeros((masks.shape[1], masks.shape[2])).astype(np.uint8)
-    for i in range(1, masks.shape[0]):
-        if i in ids:
-            m = np.zeros((masks.shape[1], masks.shape[2])).astype(np.uint8)
-            m[masks[i] > 1] = masks[i, masks[i] > 1]
-            mask_full[m > 0] = m[m>0]
-
-    if visualize:
-        cv2.imshow('Mask', mask_full)
-        cv2.waitKey(0)
-
-    return mask_full
 
 def inside_cube_test(points , cube3d):
     """
@@ -89,6 +72,7 @@ def fuse_grasp_affordance_6DOF(points, grasps_data, visualize=False, search_dist
     """
 
     points = np.array(points)
+    VISUALIZE = False
 
     # only perform grasp affordance association if mask has any points
     if points.shape[0] > 4:
@@ -113,13 +97,36 @@ def fuse_grasp_affordance_6DOF(points, grasps_data, visualize=False, search_dist
         # Find grasps inside volume of interest
         grasp_nearby = []
         grasp_nearby_pos = []
+        grasp_far_viz = []
+        grasp_close_viz = []
 
         for grasp in grasps_data:
+            near = False
             if search_min[0] < grasp.position.x < search_max[0]:
                 if search_min[1] < grasp.position.y < search_max[1]:
                     if search_min[2] < grasp.position.z < search_max[2]:
                         grasp_nearby.append(grasp)
                         grasp_nearby_pos.append(grasp.position.getVector(format="row"))
+                        near = True
+                        if VISUALIZE:
+                            g_near = copy.deepcopy(grasp)
+                            g_near.score = 1.0
+                            grasp_close_viz.append(g_near)
+            if VISUALIZE:
+                if near == False:
+                    g_far = copy.deepcopy(grasp)
+                    g_far.score = 0.0
+                    grasp_far_viz.append(g_far)
+
+        if VISUALIZE:
+            graspNear = GraspGroup(grasps = grasp_close_viz)
+            graspFar = GraspGroup(grasps = grasp_far_viz)
+            o3d_bbox = viz_boundingbox(search_min, search_max)
+            grasp_viz_near = visualizeGrasps6DOF(cloud, graspNear)
+            grasp_viz_far = visualizeGrasps6DOF(cloud, graspFar)
+            o3d.visualization.draw_geometries([cloud, o3d_bbox, *grasp_viz_near, *grasp_viz_far])
+
+
 
         # Create direction vectors based on grasping orientation
         end_points = []
@@ -144,12 +151,23 @@ def fuse_grasp_affordance_6DOF(points, grasps_data, visualize=False, search_dist
             interpol_points.append(interpol)
 
         pointcloud_grasp = []
+        viz_one = True
         for i, point_list in enumerate(interpol_points):
             point_list = np.array(point_list)
             points_outside_bbox = inside_cube_test(point_list, box_corners)  # Returns point indecies outside box
 
             if len(points_outside_bbox) < (point_list.shape[0]):
                 pointcloud_grasp.append(grasp_nearby[i])
+
+                if VISUALIZE:
+                    if viz_one:
+                        vizLine = vizualizeLine(point_list[0], point_list[-1])
+                        gExtrapolation = GraspGroup(grasps = [grasp_nearby[i]])
+                        gExtrapolation_viz = visualizeGrasps6DOF(cloud, gExtrapolation)
+                        o3d_bbox = viz_boundingbox(search_min, search_max)
+                        oriented_bbox_viz = viz_oriented_boundingbox(box_corners)
+                        o3d.visualization.draw_geometries([cloud, *gExtrapolation_viz, oriented_bbox_viz, vizLine])
+                        viz_one = False
 
         return pointcloud_grasp
     return []

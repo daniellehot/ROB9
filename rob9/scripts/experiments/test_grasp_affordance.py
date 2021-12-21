@@ -291,24 +291,35 @@ if __name__ == '__main__':
 
     graspData = graspClient.getGrasps()
 
+    cloud, cloudColor = cam.getPointCloudStatic()
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(cloud)
+    pcd.colors = o3d.utility.Vector3dVector(cloudColor)
+
+    # Visualize grasps in point cloud
+    grasp_viz = visualizeGrasps6DOF(pcd, graspData)
+    o3d.visualization.draw_geometries([pcd, *grasp_viz])
+
     print("Got ", len(graspData), " grasps")
 
     print("Segmenting affordance maps")
     # Run affordance analyzer
     affClient = AffordanceClient()
 
-    affClient.start(GPU=False)
-    _ = affClient.run(img, CONF_THRESHOLD = 0.3)
+    #affClient.start(GPU=False)
+    #_ = affClient.run(img, CONF_THRESHOLD = 0.3)
 
     _, _, _, _ = affClient.getAffordanceResult()
 
-    _ = affClient.processMasks(conf_threshold = 40, erode_kernel=(11,11))
+    _ = affClient.processMasks(conf_threshold = 40, erode_kernel=(13,13))
 
     # Visualize object detection and affordance segmentation to confirm
     cv2.imshow("Masks", affClient.visualizeMasks(img))
     cv2.waitKey(0)
+    cv2.destroyAllWindows()
     cv2.imshow("BBox's", affClient.visualizeBBox(img))
     cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
     masks = affClient.masks
     objects = affClient.objects
@@ -318,13 +329,9 @@ if __name__ == '__main__':
     # Associate affordances with grasps
     grasps_affordance = associateGraspAffordance(graspData, objects, masks, cloud, cloud_uv, demo = demo.data)
 
-    cloud, cloudColor = cam.getPointCloudStatic()
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(cloud)
-    pcd.colors = o3d.utility.Vector3dVector(cloudColor)
-
     # Visualize grasps in point cloud
-    visualizeGrasps6DOF(pcd, grasps_affordance)
+    grasp_viz = visualizeGrasps6DOF(pcd, grasps_affordance)
+    o3d.visualization.draw_geometries([pcd, *grasp_viz])
 
     # 1 = contain
     # 2 = cut
@@ -337,9 +344,19 @@ if __name__ == '__main__':
     # 9 = wide grasp
 
     # Select affordance label to grasp
-    grasps_affordance = GraspGroup(grasps = grasps_affordance.getgraspsByAffordanceLabel(label = 2))
 
-    visualizeGrasps6DOF(pcd, grasps_affordance)
+    grasp_grasp = GraspGroup(grasps = grasps_affordance.getgraspsByAffordanceLabel(label = 5))
+    grasp_viz = visualizeGrasps6DOF(pcd, grasp_grasp)
+    o3d.visualization.draw_geometries([pcd, *grasp_viz])
+
+    grasp_pound = GraspGroup(grasps = grasps_affordance.getgraspsByAffordanceLabel(label = 7))
+    grasp_viz = visualizeGrasps6DOF(pcd, grasp_pound)
+    o3d.visualization.draw_geometries([pcd, *grasp_viz])
+
+    grasps_affordance = GraspGroup(grasps = grasps_affordance.getgraspsByAffordanceLabel(label = 5))
+
+
+
 
     grasps_affordance.sortByScore()
     grasp_waypoints_path = computeWaypoints(grasps_affordance, offset = 0.1)

@@ -14,8 +14,19 @@ class Position(object):
         self.y = y
         self.z = z
 
+    def __repr__(self):
+        return "Position (x, y, z): " + str(round(self.x, 3)) + " " + str(round(self.y, 3)) + " " + str(round(self.z, 3)) + "\n"
+
     def __add__(self, val):
         return (self.x + val[0], self.y + val[1], self.z + val[2])
+
+    def __getitem__(self, index):
+        if index is 0:
+            return self.x
+        elif index is 1:
+            return self.y
+        elif index is 2:
+            return self.z
 
     def getVector(self, format="row"):
         if format == "row":
@@ -38,6 +49,15 @@ class Orientation(object):
     def __repr__(self):
         return "Orientation (wxyz)" + str(self.w) + " " + str(self.x) + " " + str(self.y) + " " + str(self.z) + "\n"
 
+    def fromRotationMatrix(self, R):
+        """ input:  R   -   3 x 3 numpy matrix, Rotation matrix
+            output: self -  with quaternion orientation representation
+        """
+        self.__init__()
+        self.x, self.y, self.z, self.w = transform.quaternionFromRotation(R)
+        return self
+
+
     def getRotationMatrix(self):
         return transform.quatToRot([self.x, self.y, self.z, self.w])
 
@@ -49,6 +69,10 @@ class Orientation(object):
         else:
             print("Invalid quaternion format, chose wxyz or xyzw ")
             return 0
+
+    def setQuaternion(self, q):
+        """ input:  q   - quaternion, numpy array [x, y, z, w] """
+        self.x, self.y, self.z, self.w = q
 
 class Grasp(object):
     """docstring for Grasp."""

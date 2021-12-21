@@ -299,8 +299,8 @@ if __name__ == '__main__':
     # Run affordance analyzer
     affClient = AffordanceClient()
 
-    affClient.start(GPU=False)
-    _ = affClient.run(img, CONF_THRESHOLD = 0.5)
+    #affClient.start(GPU=False)
+    #_ = affClient.run(img, CONF_THRESHOLD = 0.5)
 
     _, _, _, _ = affClient.getAffordanceResult()
 

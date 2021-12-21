@@ -5,12 +5,11 @@ import sys
 import numpy as np
 import os, cv2
 import argparse
-import sys
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 from affordance_analyzer.srv import *
-from std_msgs.msg import MultiArrayDimension
+from std_msgs.msg import MultiArrayDimension, String
 import rospy
 
 import caffe
@@ -34,15 +33,25 @@ class AffordanceAnalyzer(object):
         self.root_path = '/affordance-net/'
         self.img_folder = self.cwd + '/img'
         cfg.TEST.HAS_RPN = True
+        self.name = "affordancenet"
 
         self.serviceGet = rospy.Service('/affordance/result', getAffordanceSrv, self.getAffordance)
         self.serviceRun = rospy.Service('/affordance/run', runAffordanceSrv, self.analyzeAffordance)
         self.serviceStart = rospy.Service('/affordance/start', startAffordanceSrv, self.startAffordance)
         self.serviceStop = rospy.Service('/affordance/stop', stopAffordanceSrv, self.stopAffordance)
+        self.serviceName = rospy.Service('/affordance/name', getNameSrv, self.getName)
 
         self.net = None
 
         print 'AffordanceNet root folder: ', self.root_path
+
+    def getName(self, msg):
+
+        response = getNameSrvResponse()
+        response.name = String(self.name)
+
+        return response
+
 
     def run_affordance_net(self, im, CONF_THRESHOLD = 0.7):
 
