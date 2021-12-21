@@ -10,7 +10,7 @@ from std_msgs.msg import String
 from rob9.srv import tf2TransformPoseStampedSrv, tf2TransformPoseStampedSrvResponse
 from rob9.srv import tf2TransformPathSrv, tf2TransformPathSrvResponse
 
-def transformToFrame(pose, newFrame):
+def transformToFrame(pose, newFrame, currentFrame = "ptu_camera_color_optical_frame"):
     """ input:  pose - geometry_msgs.PoseStamped()
                 newFrame - desired frame for pose to be transformed into.
         output: transformed_pose_msg - pose in newFrame """

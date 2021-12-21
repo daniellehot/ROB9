@@ -4,4 +4,4 @@ manipulator:
     kinematics_solver_timeout: 0.005
     minimal_displacement_weight: 1
     avoid_joint_limits_weight: 1
-    mode: gd_c
+    #mode: gd_c

@@ -75,7 +75,7 @@ def visualizeGrasps6DOF(pointcloud, graspGroup):
 
         o3d_gripper_geom.append(gripper)
 
-    o3d.visualization.draw_geometries([pointcloud, *o3d_gripper_geom])
+    #o3d.visualization.draw_geometries([pointcloud, *o3d_gripper_geom])
 
     return o3d_gripper_geom
 

@@ -367,7 +367,7 @@ if __name__ == '__main__':
     goal_msg.pose = goal_poses[1].pose
     pub_grasp.publish(goal_msg) # visualize grasp pose in RVIZ
 
-    input("Press Enter when you are ready to move the robot")
+    #input("Press Enter when you are ready to move the robot")
     for i in range(3):
         send_trajectory_to_rviz(plans[i])
         moveit.execute(plans[i])
@@ -376,7 +376,7 @@ if __name__ == '__main__':
             rospy.sleep(1)
         print("I have grasped!")
 
-    input("Press Enter when you are ready to move the robot to the handover pose")
+    #input("Press Enter when you are ready to move the robot to the handover pose")
     moveit.moveToNamed("ready")
     moveit.moveToNamed("handover")
     input("Press Enter when you are ready to move the robot back to the ready pose")

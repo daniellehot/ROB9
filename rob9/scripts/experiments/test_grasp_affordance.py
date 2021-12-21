@@ -274,6 +274,11 @@ if __name__ == '__main__':
     cloud_uv = cam.getUvStatic()
     img = cam.getRGB()
 
+    cloud, cloudColor = cam.getPointCloudStatic()
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(cloud)
+    pcd.colors = o3d.utility.Vector3dVector(cloudColor)
+
     print("Generating grasps")
 
     # Get grasps from grasp generator
@@ -290,6 +295,7 @@ if __name__ == '__main__':
     graspClient.start(GPU=True)
 
     graspData = graspClient.getGrasps()
+    #visualizeGrasps6DOF(pcd, graspData)
 
     print("Got ", len(graspData), " grasps")
 
@@ -298,7 +304,7 @@ if __name__ == '__main__':
     affClient = AffordanceClient()
 
     affClient.start(GPU=False)
-    _ = affClient.run(img, CONF_THRESHOLD = 0.3)
+    _ = affClient.run(img, CONF_THRESHOLD = 0.02)
 
     _, _, _, _ = affClient.getAffordanceResult()
 
@@ -318,11 +324,6 @@ if __name__ == '__main__':
     # Associate affordances with grasps
     grasps_affordance = associateGraspAffordance(graspData, objects, masks, cloud, cloud_uv, demo = demo.data)
 
-    cloud, cloudColor = cam.getPointCloudStatic()
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(cloud)
-    pcd.colors = o3d.utility.Vector3dVector(cloudColor)
-
     # Visualize grasps in point cloud
     visualizeGrasps6DOF(pcd, grasps_affordance)
 
@@ -336,8 +337,21 @@ if __name__ == '__main__':
     # 8 = support
     # 9 = wide grasp
 
+    affordance_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
     # Select affordance label to grasp
-    grasps_affordance = GraspGroup(grasps = grasps_affordance.getgraspsByAffordanceLabel(label = 2))
+    print("got ", len(grasps_affordance), " affordance grasps")
+    for count, grasp in enumerate(grasps_affordance.grasps):
+        print(count, grasp.affordance_id, grasp.tool_id)
+    #print(grasps_affordance[:].affordance_id)
+    #grasps_affordance = GraspGroup(grasps = copy.deepcopy(grasps_affordance.getgraspsByTool(id = 5) ))
+    graspObj = GraspGroup(grasps = [])
+    #graspObj = GraspGroup()
+    for affordance_id in affordance_ids:
+        #if affordance_id == 5 or affordance_id == 9: # For grasp affordance
+        if affordance_id != 5 and affordance_id != 9: # for functional affordance
+            graspObj.combine(GraspGroup(grasps = copy.deepcopy(grasps_affordance.getgraspsByAffordanceLabel(label = affordance_id) ) ))
+    grasps_affordance = graspObj
 
     visualizeGrasps6DOF(pcd, grasps_affordance)
 
@@ -380,7 +394,7 @@ if __name__ == '__main__':
     goal_msg.pose = goal_poses[1].pose
     pub_grasp.publish(goal_msg) # visualize grasp pose in RVIZ
 
-    input("Press Enter when you are ready to move the robot")
+    #input("Press Enter when you are ready to move the robot")
     for i in range(3):
         send_trajectory_to_rviz(plans[i])
         moveit.execute(plans[i])
@@ -389,7 +403,7 @@ if __name__ == '__main__':
             rospy.sleep(1)
         print("I have grasped!")
 
-    input("Press Enter when you are ready to move the robot to the handover pose")
+    #input("Press Enter when you are ready to move the robot to the handover pose")
     moveit.moveToNamed("ready")
     moveit.moveToNamed("handover")
     input("Press Enter when you are ready to move the robot back to the ready pose")
