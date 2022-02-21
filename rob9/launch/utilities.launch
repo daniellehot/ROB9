@@ -1,12 +1,12 @@
 <?xml version="1.0"?>
 <launch>
 
-  <node name="grasp_aff_association_module" pkg="grasp_aff_association" type="main.py" required="true"/>
-  <node name="realsense_service_server" pkg="realsense_service" type="server.py" required="true"/>
-  <node name="speech_recognition_module" pkg="speech" type="recognition.py" required="true"/>
+  <node name="grasp_aff_association_module" pkg="grasp_aff_association" type="main.py" required="false"/>
+  <node name="realsense_service_server" pkg="realsense_service" type="server.py" required="false"/>
+  <node name="speech_recognition_module" pkg="speech" type="recognition.py" required="false"/>
   <node name="tf2_service" pkg="rob9" type="tf2_service.py" required="true"/>
   <node name="moveit_service" pkg="rob9" type="moveit_service.py" required="true"/>
-  <node name="trajectory_service" pkg="moveit_scripts" type="trajectory_service_ik.py" required="true"/>
+  <node name="trajectory_service" pkg="moveit_scripts" type="trajectory_server_ik.py" required="true"/>
   <node name="frame_publisher" pkg="moveit_scripts" type="frame_publisher.py" output="screen"/>
 
 

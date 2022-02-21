@@ -64,7 +64,7 @@ rosrun speech recognition.py
 rosrun rob9 tf2_service.py
 rosrun rob9 moveit_server.py
 rosrun rob9 webcam_publisher.py
-rosrun moveit_scripts trajectory_service_ik.py
+rosrun moveit_scripts trajectory_server_ik.py
 ```
 
 #### 2. Launch affordance analyzer in docker, see docker/Readme.md for more information
