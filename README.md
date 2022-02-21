@@ -62,7 +62,7 @@ rosrun grasp_aff_association main.py
 rosrun realsense_service server.py
 rosrun speech recognition.py
 rosrun rob9 tf2_service.py
-rosrun rob9 moveit_service.py
+rosrun rob9 moveit_server.py
 rosrun rob9 webcam_publisher.py
 rosrun moveit_scripts trajectory_service_ik.py
 ```
