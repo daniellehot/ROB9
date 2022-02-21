@@ -40,7 +40,7 @@
   </joint>
 
 
-  <xacro:include filename="$(find dummy)/urdf/torso.urdf.xacro"/>
+  <xacro:include filename="$(find rob9)/urdf/torso.urdf.xacro"/>
   <link name="torso_link"/>
 
   <joint name="torso_joint" type="fixed">
@@ -88,21 +88,21 @@
     <origin xyz="0.0 0.0 0.0" rpy="0 0 ${pi/4}"/>
   </joint>
 
-  <xacro:include filename="$(find dummy)/urdf/robotiq-3f-gripper_articulated.urdf.xacro"/>
+  <xacro:include filename="$(find rob9)/urdf/robotiq-3f-gripper_articulated.urdf.xacro"/>
   <joint name="s_model_gripper" type="fixed">
     <origin xyz="0.0 0.0 0.0" rpy="${pi} 0 0"/>
     <parent link="flange" />
     <child link="s_connector_plate" />
   </joint>
 
-  <xacro:include filename="$(find dummy)/urdf/flir_d48e.urdf.xacro"/>
+  <xacro:include filename="$(find rob9)/urdf/flir_d48e.urdf.xacro"/>
   <joint name="PTU_table_joint" type="fixed">
     <parent link="table"/>
     <child link="ptu_base"/>
     <origin xyz="-0.05617 -0.2085 1.1145" rpy="1.57079 0 0"/>
   </joint>
 
-  <xacro:include filename="$(find dummy)/urdf/_d435.urdf.xacro"/>
+  <xacro:include filename="$(find rob9)/urdf/_d435.urdf.xacro"/>
 
   <xacro:sensor_d435 parent="camera_ptu_link" prefix="ptu_">
     <origin xyz="0 0 0" rpy="0 0 0" />
