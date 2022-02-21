@@ -35,15 +35,21 @@ docker pull huchiewuchie/graspnet-rob9
 
 2. Setup catkin workspace
 ```
-cd
-mkdir rob9_ws && mkdir rob9_ws/src
+mkdir -p rob9_ws/src
 cd rob9_ws/src
-git clone https://bitbucket.org/masterrob/lh7-handover/src/main/
 git clone https://github.com/daniellehot/ROB9.git
+git clone https://github.com/UniversalRobots/Universal_Robots_ROS_Driver.git
+git clone -b calibration_devel https://github.com/fmauch/universal_robot.git
+git clone https://github.com/ros-industrial/robotiq.git
+git clone https://github.com/daniellehot/ptu.git
+git clone https://github.com/TAMS-Group/bio_ik.git
 cd ..
+rosdep update
+rosdep install --from-paths src --ignore-src -y
 catkin_make -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-11.4 -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_BUILD_TYPE=Release
 source devel/setup.bash
 ```
+For information on how to calibrate and establish connection to a UR5 robotic manipulator, please see the official ROS Universal Robots package that can be found here: https://github.com/UniversalRobots/Universal_Robots_ROS_Driver
 
 ### Usage
 
@@ -108,24 +114,12 @@ rosrun rob9 test_grasp_affordance.py
 rosrun moveit_scripts execute_viz.py
 ```
 
-
 ### Additional information
 Relevant IP addresses:
-
-- Robot - 192.168.1.106
 - Gripper - 192.168.1.140
 - PTU Tilt-pan - 192.168.1.110
 
-
 If you get nvcc fatal error, follow this guide - https://github.com/leggedrobotics/darknet_ros#building
-
-Connection guides
-UR5
-Robotiq - http://wiki.ros.org/robotiq/Tutorials/Control%20of%20a%203-Finger%20Gripper%20using%20the%20Modbus%20TCP%20Protocol
-PTU Tilt-pan
-
-
-roslaunch ur_robot_driver ur5_bringup.launch robot_ip:=192.168.1.106 kinematics_config:=${HOME}/ur10_example_calibration.yaml
 
 ### Acknowledgements
 
