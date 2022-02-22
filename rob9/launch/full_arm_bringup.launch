@@ -31,4 +31,8 @@
   </include>
 
   <rosparam file="$(find rob9)/config/trajectory_params.yaml"/>
+
+  <include file="$(find rob9)/launch/utilities.launch"/>
+
+
 </launch>
