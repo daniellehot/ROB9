@@ -203,12 +203,15 @@ def callback(msg):
     #input("Press Enter when you are ready to move the robot to the handover pose")
     #move_to_handover()
     moveit.moveToNamed("ready")
-    moveit.moveToNamed("handover")
+    # Move to pre-grasp waypoint and drop the item
+    moveit.execute(plans[0])
+    gripper_pub.publish(open_gripper_msg)
+    #moveit.moveToNamed("handover")
     #raw_input("Press Enter when you are ready to move the robot back to the ready pose")
-    input("Press Enter when you are ready to move the robot back to the ready pose")
+    #input("Press Enter when you are ready to move the robot back to the ready pose")
 
     moveit.moveToNamed("ready")
-    gripper_pub.publish(open_gripper_msg)
+    #gripper_pub.publish(open_gripper_msg)
     #move_to_ready()
 
 def computeWaypoints(graspObjects, offset = 0.1):
