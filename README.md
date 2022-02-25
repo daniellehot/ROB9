@@ -2,7 +2,7 @@
 ##### Group members: Albert Christensen, Daniel Lehotsky and Marius Jørgensen
 ##### Supervisor: Dimitris Chrysostomou
 
-This repository contains the implementation of the ROB9 semester project rTask-oriented handover using task-agnostic grasping and affordance segmentation's implementation at Aalborg University.
+This repository contains the implementation of the ROB9 semester project Task-oriented handover using task-agnostic grasping and affordance segmentation's implementation at Aalborg University.
 
 ## Installation instructions
 
